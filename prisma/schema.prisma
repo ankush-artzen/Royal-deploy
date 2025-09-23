@@ -1,0 +1,157 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+}
+
+model Session {
+  id               String            @id @map("_id")
+  accessToken      String? 
+  expires          DateTime?
+  isOnline         Boolean
+  scope            String?
+  shop             String
+  state            String
+  apiKey           String
+  onlineAccessInfo OnlineAccessInfo?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model OnlineAccessInfo {
+  id                  String          @id @default(auto()) @map("_id") @db.ObjectId
+  session             Session?        @relation(fields: [sessionId], references: [id])
+  sessionId           String?         @unique
+  expiresIn           Int
+  associatedUserScope String
+  associatedUser      AssociatedUser?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+}
+
+model AssociatedUser {
+  id                 String            @id @default(auto()) @map("_id") @db.ObjectId
+  onlineAccessInfo   OnlineAccessInfo? @relation(fields: [onlineAccessInfoId], references: [id])
+  onlineAccessInfoId String?           @unique
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  userId             BigInt
+  firstName          String
+  lastName           String
+  email              String
+  accountOwner       Boolean
+  locale             String
+  collaborator       Boolean
+  emailVerified      Boolean
+}
+
+model StoreSetting {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  isActive  Boolean
+  shop      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Designer {
+  id                  String          @id @default(auto()) @map("_id") @db.ObjectId
+  name                String
+  email               String          @unique
+  royalties           ProductRoyalty[]
+}
+
+
+
+model ProductRoyalty {
+  id                  String    @id @default(auto()) @map("_id") @db.ObjectId
+  productId           String
+  shopifyId           String
+  title               String
+  image               String?
+  status              String?
+  inArchive           Boolean?
+  designerId          String
+  royality            Float
+  shop                String?
+  totalSold           Int       @default(0)
+  totalRoyaltyEarned  Json?
+  designer            Designer  @relation(fields: [designerId], references: [id])
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  price           Json?     @default("{\"amount\":0,\"currency\":\"\",\"storeCurrency\":\"\",\"storeAmount\":0}")
+
+  @@unique([productId, designerId])
+}
+
+
+
+model RoyaltyOrder {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  shop           String
+  orderId        String
+  orderName      String
+  calculatedRoyaltyAmount Float ?
+  lineItem       LineItem[]
+  currency       String?
+  convertedCurrencyAmountRoyality         Float?  
+  orderProductTotalAmount    Float?     
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([shop, orderId], name: "shop_orderId")
+}
+
+type LineItem {
+  productId        String
+  title            String
+  variantId        String
+  variantTitle     String?
+  designerId       String
+  productRoyaltyAmount  Float
+  quantity         Int
+  unitPrice        Float  
+  royaltyPercentage Float
+}
+
+
+model RoyaltySubscription {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  shop         String   @unique
+  chargeId     String
+  planName     String
+  cappedAmount Float?
+  lineItemId    String? 
+  currency     String?
+  status       String
+  test         Boolean
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+
+model RoyaltyTransaction {
+  id                         String   @id @default(auto()) @map("_id") @db.ObjectId
+  shop                       String   
+  shopifyTransactionChargeId String
+  orderId                    String
+  orderName                  String?
+  productId                  String?  
+  description                String
+  price                      Json  
+    currency                   String 
+  balanceUsed                Float?   
+  balanceRemaining           Float?   
+  royaltyPercentage          Float?     
+  designerId                 String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@unique([shop, orderId, productId, designerId], name: "shop_orderId_productId_designerId")
+}
