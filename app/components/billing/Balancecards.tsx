@@ -34,7 +34,7 @@ const BalanceCards = ({
     value: number | null | undefined,
     currency: string | null | undefined,
     convertedValue: number | null,
-    tone: "critical" | "success" | "subdued"
+    tone: "critical" | "success" | "subdued",
   ) => {
     if (!latestTransaction) {
       return (
@@ -46,32 +46,18 @@ const BalanceCards = ({
 
     if (shopCurrency === "USD") {
       return (
-        <Text
-          as="h2"
-          variant="headingMd"
-          tone={tone}
-          fontWeight="bold"
-        >
+        <Text as="h2" variant="headingMd" tone={tone} fontWeight="bold">
           {value?.toFixed(2)} {currency}
         </Text>
       );
     } else if (shopCurrency === "INR") {
       return (
         <>
-          <Text
-            as="h2"
-            variant="headingMd"
-            tone={tone}
-            fontWeight="bold"
-          >
-            {convertedValue?.toFixed(2)} 
+          <Text as="h2" variant="headingMd" tone={tone} fontWeight="bold">
+            {convertedValue?.toFixed(2)}
           </Text>
           {currency !== "INR" && (
-            <Text
-              as="h2"
-              variant="headingSm"
-              tone="subdued"
-            >
+            <Text as="h2" variant="headingSm" tone="subdued">
               ({value?.toFixed(2)} {currency})
             </Text>
           )}
@@ -96,7 +82,7 @@ const BalanceCards = ({
             <InlineStack align="start" blockAlign="center" gap="200">
               {[1, 2, 3].map((i) => (
                 <Card key={i}>
-                  <Box minWidth="260px" minHeight="100px" padding="400">
+                  <Box minWidth="360px" minHeight="100px" padding="400">
                     <InlineStack align="center" blockAlign="center">
                       <Spinner
                         accessibilityLabel={`Loading balance ${i}`}
@@ -112,55 +98,46 @@ const BalanceCards = ({
 
         {!loadingTx && (
           <BlockStack gap="200">
-            <InlineStack align="start" blockAlign="center" gap="200">
+            <InlineStack align="start" blockAlign="center" gap="800">
               {/* Balance Used */}
               <Card>
-                <Box minWidth="260px" minHeight="100px" padding="400">
+                <Box minWidth="400px" minHeight="100px" padding="400">
                   <Text as="h3" variant="headingXl" tone="subdued">
                     Balance Used
+                  </Text>
+                  <Text as="p"tone="subdued">
+                    Total amount already utilized from your subscription capped
+                    amount
                   </Text>
                   {renderBalanceCard(
                     "Balance Used",
                     latestTransaction?.balanceUsed,
                     latestTransaction?.currency,
                     balanceUsedINR,
-                    latestTransaction?.balanceUsed && latestTransaction.balanceUsed > 0
+                    latestTransaction?.balanceUsed &&
+                      latestTransaction.balanceUsed > 0
                       ? "critical"
-                      : "success"
+                      : "success",
                   )}
                 </Box>
               </Card>
 
-              {/* Balance Remaining */}
-              <Card>
-                <Box minWidth="260px" minHeight="100px" padding="400">
-                  <Text as="h3" variant="headingXl" tone="subdued">
-                    Balance Remaining
-                  </Text>
-                  {renderBalanceCard(
-                    "Balance Remaining",
-                    latestTransaction?.balanceRemaining,
-                    latestTransaction?.currency,
-                    balanceRemainingINR,
-                    latestTransaction?.balanceRemaining && latestTransaction.balanceRemaining > 0
-                      ? "success"
-                      : "subdued"
-                  )}
-                </Box>
-              </Card>
-
+       
               {/* Capped Amount */}
               <Card>
-                <Box minWidth="260px" minHeight="100px" padding="400">
+                <Box minWidth="400px" minHeight="100px" padding="400">
                   <Text as="h3" variant="headingXl" tone="subdued">
                     Capped Amount
+                  </Text>
+                <Text as="p" tone="subdued">
+                    Maximum allowed spending limit for your subscription{" "}
                   </Text>
                   {renderBalanceCard(
                     "Capped Amount",
                     cappedAmount,
                     cappedCurrency,
                     cappedAmountINR,
-                    "subdued"
+                    "subdued",
                   )}
                 </Box>
               </Card>
@@ -173,3 +150,4 @@ const BalanceCards = ({
 };
 
 export default BalanceCards;
+
