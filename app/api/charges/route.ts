@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
         cappedAmount: true,
         currency: true,
         chargeId: true,
+        status: true,
       },
     });
     
@@ -38,6 +39,8 @@ export async function GET(req: NextRequest) {
       cappedAmount: subscription.cappedAmount,
       currency: subscription.currency,
       chargeId: subscription.chargeId, 
+      status: subscription.status,
+
     });
   } catch (err) {
     console.error("❌ Error fetching capped amount:", err);

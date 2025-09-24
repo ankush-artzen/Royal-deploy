@@ -48,8 +48,25 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Shopify REST API call
-    // Shopify REST API call
+    // 🔹 Fetch the latest RoyaltyTransaction BEFORE Shopify API call
+    let latestTransaction = null;
+    let latestBalanceUsed = 0;
+
+    try {
+      latestTransaction = await prisma.royaltyTransaction.findFirst({
+        where: { shop },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (latestTransaction) {
+        latestBalanceUsed = latestTransaction.balanceUsed || 0;
+        console.log("📊 Latest balanceUsed:", latestBalanceUsed);
+      }
+    } catch (txErr) {
+      console.error("💥 Failed to fetch latest RoyaltyTransaction:", txErr);
+    }
+    console.log("latestBalanceUsed", latestBalanceUsed);
+    // Shopify REST API call (unchanged)
     const shopifyUrl = `https://${shop}/admin/api/${API_VERSION}/recurring_application_charges/${chargeId}/customize.json`;
 
     const response = await fetch(shopifyUrl, {
@@ -61,7 +78,10 @@ export async function PUT(req: NextRequest) {
       },
       body: JSON.stringify({
         recurring_application_charge: {
-          capped_amount: ROYALTY_CONFIG.DEFAULT_CAPPED_AMOUNT,        },
+          // You can optionally use latestBalanceUsed if needed here
+          capped_amount:
+            ROYALTY_CONFIG.DEFAULT_CAPPED_AMOUNT + latestBalanceUsed,
+        },
       }),
     });
 

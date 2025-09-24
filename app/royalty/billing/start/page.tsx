@@ -41,6 +41,7 @@ export default function HomePage() {
     manualAmount,
     updatingCappedAmount,
     updateError,
+    statusState, 
     updateSuccess,
     shopCurrency,
     billingApproved,
@@ -94,6 +95,8 @@ export default function HomePage() {
               handleManualUpdate={handleManualUpdate}
               manualAmount={manualAmount}
               setManualAmount={setManualAmount}
+              chargeId={chargeId}
+              status={statusState}
             />
           </Layout.Section>
 

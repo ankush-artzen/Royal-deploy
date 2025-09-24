@@ -21,6 +21,8 @@ interface BillingBannerProps {
   handleManualUpdate: (amount?: number) => void;
   manualAmount: string;
   setManualAmount: (amount: string) => void;
+  chargeId?: string | null; // ← added
+  status?: string | null; // ← added
 }
 
 const BillingBanner = ({
@@ -34,22 +36,27 @@ const BillingBanner = ({
   updatingCappedAmount,
   updateError,
   handleManualUpdate,
+  chargeId,
+  status,
 }: BillingBannerProps) => {
+  // Now you can use chargeId and status inside the component
+  console.log("Charge ID:", chargeId);
+  console.log("Billing Status:", status);
   const isNinetyPercentUsed = () => {
     if (
       !billingApproved ||
-      balanceUsed === null || 
+      balanceUsed === null ||
       balanceUsed === undefined ||
-      cappedAmount === null || 
+      cappedAmount === null ||
       cappedAmount === undefined ||
       cappedAmount <= 0 ||
       balanceUsed < 0
     ) {
       return false;
     }
-    
+
     const percentageUsed = (balanceUsed / cappedAmount) * 100;
-    return percentageUsed >= 80;
+    return percentageUsed >= 10;
   };
 
   const canEnableBilling = !billingApproved || isNinetyPercentUsed();
@@ -79,7 +86,12 @@ const BillingBanner = ({
         {isNinetyPercentUsed() && (
           <>
             <Text as="p" tone="critical" variant="bodyMd" fontWeight="bold">
-              Warning: {cappedAmount ? ((balanceUsed / cappedAmount) * 100).toFixed(2) : '0'}% of your capped amount has been used. You can update additional billing.
+              Warning:{" "}
+              {cappedAmount
+                ? ((balanceUsed / cappedAmount) * 100).toFixed(2)
+                : "0"}
+              % of your capped amount has been used. You can update additional
+              billing.
             </Text>
 
             {updateError && (
@@ -88,7 +100,7 @@ const BillingBanner = ({
               </Banner>
             )}
           </>
-        )}    
+        )}
 
         <List>
           <List.Item>
@@ -99,27 +111,26 @@ const BillingBanner = ({
         </List>
 
         <InlineStack align="start">
-          {/* Show Update Capped Amount button instead of Start Royalty Plan when billing is enabled and at 90% */}
-          {billingApproved && isNinetyPercentUsed() ? (
+          {/* Show Update Capped Amount button if approved & nearing limit */}
+          {billingApproved && status == "active" && isNinetyPercentUsed() && (
             <Button
               variant="primary"
               loading={updatingCappedAmount}
-              onClick={() => {
-                console.log("🔹 Update button clicked");
-                handleManualUpdate();
-              }}
+              onClick={() => handleManualUpdate()}
               disabled={updatingCappedAmount}
             >
               Update Capped Amount
             </Button>
-          ) : (
+          )}
+
+          {!billingApproved && status !== "active" && (
             <Button
               variant="primary"
               onClick={startRoyaltyPlan}
               loading={creatingPlan}
-              disabled={creatingPlan || billingApproved}
+              disabled={creatingPlan}
             >
-              {billingApproved ? "Billing Enabled" : "Start Royalty Plan"}
+              Start Royalty Plan
             </Button>
           )}
         </InlineStack>

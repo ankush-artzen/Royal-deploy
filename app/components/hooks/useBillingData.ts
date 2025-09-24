@@ -27,6 +27,9 @@ export const useBillingData = (app: any, dispatch: AppDispatch) => {
   const [billingApproved, setBillingApprovedState] = useState(false);
   const [chargeId, setChargeIdState] = useState<string | null>(null);
   const [cappedAmount, setCappedAmountState] = useState<number | null>(null);
+  const [statusState, setStatusState] = useState<string | null>(null);
+  
+
   const [cappedCurrency, setCappedCurrencyState] = useState<string | null>(
     null,
   );
@@ -99,7 +102,7 @@ export const useBillingData = (app: any, dispatch: AppDispatch) => {
   // Fetch transactions
   useEffect(() => {
     if (!shop || !billingApproved) return;
-
+  
     async function fetchLatestTransaction() {
       setLoadingTx(true);
       try {
@@ -107,45 +110,60 @@ export const useBillingData = (app: any, dispatch: AppDispatch) => {
           `/api/royality/orders/transaction/balanceused?shop=${shop}`,
         );
         const data = await res.json();
-        if (res.ok && data.success)
+  
+        console.log("Fetched latest transaction data:", data); // ← debug here
+  
+        if (res.ok && data.success) {
           setLatestTransaction(data.latestTransaction);
+          console.log("Set latestTransaction state:", data.latestTransaction); // ← debug state
+        }
       } catch (err) {
         console.error("Error fetching transactions:", err);
       } finally {
         setLoadingTx(false);
       }
     }
-
+  
     fetchLatestTransaction();
   }, [shop, billingApproved]);
-
+  
   // Fetch capped amount if missing
   useEffect(() => {
     if (!shop || !billingApproved || cappedAmount !== null) return;
-
+  
     async function fetchCappedAmount() {
       try {
         const res = await fetch(`/api/charges?shop=${shop}`);
         const data = await res.json();
+  
         if (res.ok) {
           setCappedAmountState(data.cappedAmount);
           setCappedCurrencyState(data.currency);
-          const normalizedChargeId =
-            data.chargeId || data.subscriptionId || null;
+  
+          const normalizedChargeId = data.chargeId || data.subscriptionId || null;
           setChargeIdState(normalizedChargeId);
-
-          dispatch(setCappedAmount(data.cappedAmount));
-          dispatch(setCurrency(data.currency));
-          dispatch(setChargeId(normalizedChargeId));
+  
+          setStatusState(data.status);
+  
+          // ✅ Log all fetched values
+          console.log("Fetched capped amount data:", {
+            cappedAmount: data.cappedAmount,
+            currency: data.currency,
+            chargeId: normalizedChargeId,
+            status: data.status,
+          });
+        } else {
+          console.error("Error fetching capped amount:", data.error || "Unknown error");
         }
       } catch (err) {
         console.error("Error fetching capped amount:", err);
       }
     }
-
+  
     fetchCappedAmount();
-  }, [shop, billingApproved, dispatch, cappedAmount]);
-
+  }, [shop, billingApproved, cappedAmount]);
+  
+  
   // Update manual amount when cappedAmount changes
   useEffect(() => {
     if (cappedAmount !== null) {
@@ -227,6 +245,7 @@ export const useBillingData = (app: any, dispatch: AppDispatch) => {
       setCappedAmountState(newAmount);
       dispatch(setCappedAmount(newAmount));
       dispatch(setChargeId(effectiveChargeId));
+      console.log("setChargeId",setChargeId)
 
       window.open(approvalUrl, "_blank");
       setUpdateSuccess(true);
@@ -262,7 +281,6 @@ export const useBillingData = (app: any, dispatch: AppDispatch) => {
       console.error("Error refreshing billing:", err);
     }
   }, [shop]);
-
   return {
     shop,
     billingLoading,
@@ -281,6 +299,7 @@ export const useBillingData = (app: any, dispatch: AppDispatch) => {
     chargeId,
     cappedAmount,
     cappedCurrency,
+    statusState,        
     setManualAmount,
     setError,
     setPlanError,
@@ -290,4 +309,5 @@ export const useBillingData = (app: any, dispatch: AppDispatch) => {
     handleManualUpdate,
     checkBilling,
   };
+  
 };
