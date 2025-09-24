@@ -80,7 +80,7 @@ const BalanceCards = ({
         {loadingTx && (
           <BlockStack gap="200">
             <InlineStack align="start" blockAlign="center" gap="200">
-              {[1, 2, 3].map((i) => (
+              {[1, 2].map((i) => (
                 <Card key={i}>
                   <Box minWidth="360px" minHeight="100px" padding="400">
                     <InlineStack align="center" blockAlign="center">
