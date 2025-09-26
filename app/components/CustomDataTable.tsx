@@ -1,38 +1,16 @@
 "use client";
 
-import { FC, ReactNode } from "react";
+import { FC } from "react";
 import { Card, DataTable, Spinner, EmptyState, Text } from "@shopify/polaris";
+import { EMPTY_STATE_IMAGE } from "@/lib/config/royaltyConfig";
 
 interface CustomDataTableProps {
   columns: string[];
-  rows: ReactNode[][];
+  rows: any[][];
   loading?: boolean;
   error?: string | null;
   emptyStateMessage?: string;
   emptyStateImage?: string;
-}
-export interface LineItemStat {
-  productId: string;
-  title: string;
-  variantId?: string;
-  unitSold: number;
-  totalSale: number;
-  totalRoyalty: number;
-  last30DaysRoyalty: number;
-  royaltyPercentage?: number;
-  currency?: string | null;
-
-  convertedCurrencyAmountRoyalty?: number;
-}
-
-export interface ApiResponse {
-  products: LineItemStat[];
-  totalProducts: number;
-  totalPages: number;
-
-  // ✅ Add these
-  totalRoyalties: number;
-  totalConvertedRoyalty: number;
 }
 
 const CustomDataTable: FC<CustomDataTableProps> = ({
@@ -41,14 +19,12 @@ const CustomDataTable: FC<CustomDataTableProps> = ({
   loading = false,
   error = null,
   emptyStateMessage = "No records found",
-  emptyStateImage = "https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png",
+  emptyStateImage = EMPTY_STATE_IMAGE, // ✅ use config default
 }) => {
   return (
     <Card>
       {loading ? (
-        <div
-          style={{ display: "flex", justifyContent: "center", padding: "32px" }}
-        >
+        <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
           <Spinner accessibilityLabel="Loading data" size="large" />
         </div>
       ) : error ? (
@@ -60,9 +36,11 @@ const CustomDataTable: FC<CustomDataTableProps> = ({
       ) : (
         <div className="custom-table-wrapper" style={{ overflowX: "auto" }}>
           <style jsx global>{`
-            /* Hide Polaris DataTable navigation dots */
             .custom-table-wrapper .Polaris-DataTable__Navigation {
               display: none !important;
+            }
+            .Polaris-DataTable__Cell {
+              vertical-align: middle !important;
             }
           `}</style>
 

@@ -1,37 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma-connect";
 
-// Type definitions
-type LineItemStat = {
-  productId: string;
-  title: string;
-  variantId?: string | null;
-  variantTitle?: string | null;
-  unitSold: number;
-  totalSale: number;
-  totalRoyalty: number;
-  royaltyPercentage: number;
-  last30DaysRoyalty: number;
-  image?: string | null;
-  price?: number | null;
-  currency?: string | null;
-};
+export const dynamic = "force-dynamic";
 
-type ApiResponse = {
-  shop: string;
-  products: LineItemStat[];
-  totalProducts: number;
-  totalUnitSold: number;
-  totalSales: number;
-  totalRoyalties: number;
-  totalConvertedRoyalty: number;
-  last30DaysTotalRoyalty: number;
-  last30DaysConvertedRoyalty: number;
-  currentPage: number;
-  totalPages: number;
-  hasNextPage: boolean;
-  hasPrevPage: boolean;
-};
+// Type definitions
 
 export async function GET(req: NextRequest) {
   try {
@@ -188,7 +160,7 @@ export async function GET(req: NextRequest) {
       totalPages,
       hasNextPage: currentPage < totalPages,
       hasPrevPage: currentPage > 1,
-    } as ApiResponse);
+    } as ApiResponsesold);
   } catch (error) {
     console.error("Error fetching product royalty stats:", error);
     return NextResponse.json(

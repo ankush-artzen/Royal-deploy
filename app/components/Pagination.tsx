@@ -4,14 +4,12 @@ import { FC } from "react";
 import { Icon } from "@shopify/polaris";
 import { ChevronLeftIcon, ChevronRightIcon } from "@shopify/polaris-icons";
 
-interface PaginationProps {
-  page: number;
-  totalPages: number;
-  onPrev: () => void;
-  onNext: () => void;
-}
-
-const Pagination: FC<PaginationProps> = ({ page, totalPages, onPrev, onNext }) => {
+const Pagination: FC<PaginationProps> = ({
+  page,
+  totalPages,
+  onPrev,
+  onNext,
+}) => {
   return (
     <div className="flex items-center justify-center gap-6 py-4">
       <button

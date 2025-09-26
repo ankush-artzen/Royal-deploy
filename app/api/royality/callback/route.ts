@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { findSessionsByShop } from "@/lib/db/session-storage";
 import prisma from "@/lib/db/prisma-connect";
 
+export const dynamic = "force-dynamic";
+
 const API_VERSION = "2025-07";
 
 export async function GET(req: NextRequest) {

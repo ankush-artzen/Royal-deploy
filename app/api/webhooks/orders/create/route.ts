@@ -255,34 +255,55 @@ export async function POST(req: NextRequest) {
       body.financial_status === "paid"
     ) {
       const transactionPromises = result.lineItem.map(async (li: any) => {
-        try {
-          await createRoyaltyTransactionForOrder({
-            shop,
-            orderId,
-            orderName: result.orderName,
+        // Skip if there are no royalties or if product royalty is expired
+        if (!li.royalties) return;
 
-            productId: li.productId,
-            description: `Royalty payment for order ${result.orderName} - ${li.title}`,
-            price: li.productRoyaltyAmount,
-            currency: result.currency || "",
-            royaltyPercentage: li.royaltyPercentage,
-            designerId: li.designerId,
+        for (const royalty of li.royalties) {
+          // Get the product royalty to check expiry
+          const productRoyalty = await prisma.productRoyalty.findUnique({
+            where: { id: royalty.id }, // Adjust this based on your royalty structure
           });
-        } catch (error: any) {
-          if (
-            error.message?.includes("already exists") ||
-            error.message?.includes("Transaction already exists")
-          ) {
-            console.log(
-              `⚠️ Transaction already exists for ${li.title} → Skipping`,
-            );
-            return null;
+
+          // Skip if royalty is expired
+          if (productRoyalty?.expiry) {
+            const expiryDate = new Date(productRoyalty.expiry);
+            if (expiryDate.getTime() < Date.now()) {
+              console.log(
+                `⚠️ Skipping transaction for ${li.title} → product royalty expired`,
+              );
+              continue; 
+            }
           }
-          console.error(
-            `❌ Error creating transaction for ${li.title}:`,
-            error,
-          );
-          throw error;
+
+          try {
+            await createRoyaltyTransactionForOrder({
+              shop,
+              orderId,
+              orderName: result.orderName,
+              productId: li.productId,
+              description: `Royalty payment for order ${result.orderName} - ${li.title}`,
+              price: li.productRoyaltyAmount,
+              currency: result.currency || "",
+              royaltyPercentage: li.royaltyPercentage,
+              designerId: li.designerId,
+              shopifyTransactionChargeId: "", // optional if needed
+            });
+          } catch (error: any) {
+            if (
+              error.message?.includes("already exists") ||
+              error.message?.includes("Transaction already exists")
+            ) {
+              console.log(
+                `⚠️ Transaction already exists for ${li.title} → Skipping`,
+              );
+              continue;
+            }
+            console.error(
+              `❌ Error creating transaction for ${li.title}:`,
+              error,
+            );
+            throw error;
+          }
         }
       });
 

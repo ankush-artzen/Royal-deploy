@@ -7,6 +7,8 @@ import {
   ERROR_MESSAGES,
 } from "@/lib/constants/constants";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);

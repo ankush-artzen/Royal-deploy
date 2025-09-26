@@ -3,18 +3,6 @@
 import React from "react";
 import { Modal, Text, Button, Box } from "@shopify/polaris";
 
-interface DeleteConfirmationModalProps {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  loading?: boolean;
-  title?: string;
-  message?: string;
-  confirmText?: string;
-  cancelText?: string;
-  actionType?: "switchOn" | "switchOff"; 
-}
-
 const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   open,
   onClose,
@@ -45,11 +33,15 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
         title={title}
         footer={
           <Box padding="400" paddingBlockStart="400">
-            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-              <Button onClick={onClose}>
-                {cancelText}
-              </Button>
-              <Button 
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                justifyContent: "flex-end",
+              }}
+            >
+              <Button onClick={onClose}>{cancelText}</Button>
+              <Button
                 tone={actionType === "switchOn" ? "success" : "critical"}
                 variant="secondary"
                 loading={loading}

@@ -39,3 +39,4 @@ export const ERROR_MESSAGES_edit = {
 export const SUCCESS_MESSAGES = {
   ROYALTY_UPDATED: "Royalty updated successfully",
 };
+export const PAGE_SIZE = 10;

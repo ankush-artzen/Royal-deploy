@@ -86,7 +86,7 @@ model ProductRoyalty {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   price           Json?     @default("{\"amount\":0,\"currency\":\"\",\"storeCurrency\":\"\",\"storeAmount\":0}")
-
+  expiry              DateTime? 
   @@unique([productId, designerId])
 }
 
@@ -123,7 +123,7 @@ type LineItem {
 
 model RoyaltySubscription {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  shop         String   @unique
+  shop         String  @unique
   chargeId     String
   planName     String
   cappedAmount Float?
@@ -145,7 +145,8 @@ model RoyaltyTransaction {
   productId                  String?  
   description                String
   price                      Json  
-    currency                   String 
+  currency                   String 
+  status                     String?
   balanceUsed                Float?   
   balanceRemaining           Float?   
   royaltyPercentage          Float?     
@@ -153,5 +154,5 @@ model RoyaltyTransaction {
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
 
-  @@unique([shop, orderId, productId, designerId], name: "shop_orderId_productId_designerId")
+  @@unique([shop, orderId, productId,shopifyTransactionChargeId,designerId], name: "shop_orderId_productId_shopifyTransactionChargeId_designerId")
 }

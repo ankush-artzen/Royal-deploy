@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma-connect";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -24,7 +26,6 @@ export async function GET(req: NextRequest) {
         status: true,
       },
     });
-    
 
     if (!subscription) {
       return NextResponse.json(
@@ -32,15 +33,13 @@ export async function GET(req: NextRequest) {
         { status: 404 },
       );
     }
-    console.log("subvcriptionmnmnm",subscription);
-    
+    // console.log("subvcriptionmnmnm", subscription);
 
     return NextResponse.json({
       cappedAmount: subscription.cappedAmount,
       currency: subscription.currency,
-      chargeId: subscription.chargeId, 
+      chargeId: subscription.chargeId,
       status: subscription.status,
-
     });
   } catch (err) {
     console.error("❌ Error fetching capped amount:", err);

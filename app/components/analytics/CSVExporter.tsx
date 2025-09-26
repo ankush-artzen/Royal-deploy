@@ -1,5 +1,4 @@
 "use client";
-import { LineItemStat } from "./RoyaltyTable";
 
 function escapeCSV(s: string) {
   if (s.includes(",") || s.includes('"') || s.includes("\n")) {
@@ -32,7 +31,7 @@ export function exportRoyaltyCSV(data: LineItemStat[]) {
       r.totalRoyalty,
       r.royaltyPercentage,
       r.last30DaysRoyalty,
-    ].join(",")
+    ].join(","),
   );
 
   const csv = [headers.join(","), ...lines].join("\n");

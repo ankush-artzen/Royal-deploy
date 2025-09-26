@@ -3,14 +3,6 @@ import prisma from "@/lib/db/prisma-connect";
 import { createRoyaltyTransactionForOrder } from "@/lib/helper/createRoyaltyTransactionForOrder";
 import { convertCurrency } from "@/lib/config/currency-utils";
 
-interface ShopifyLineItem {
-  product_id?: number | string;
-  variant_id?: number | string;
-  title: string;
-  variant_title?: string;
-  quantity: number;
-  price: string | number;
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -73,6 +65,7 @@ export async function POST(req: NextRequest) {
         ],
       },
     });
+
     if (!allRoyalties.length) {
       return NextResponse.json({
         success: true,
@@ -91,7 +84,7 @@ export async function POST(req: NextRequest) {
       royaltiesMap.get(numericId)!.push(royalty);
     });
 
-    // Prepare line items for royalty transactions
+    // Prepare line items for royalty transactions and orders
     const lineItemsToAdd: any[] = [];
     for (const item of body.line_items as ShopifyLineItem[]) {
       const productIdNumeric = item.product_id?.toString();
@@ -107,6 +100,17 @@ export async function POST(req: NextRequest) {
       const lineTotal = unitPrice * quantity;
 
       for (const royalty of royalties) {
+        // ✅ Check expiry date before processing
+        if (royalty.expiry) {
+          const expiryDate = new Date(royalty.expiry);
+          if (expiryDate.getTime() < Date.now()) {
+            console.log(
+              `⚠️ Skipping expired royalty for product ${productIdNumeric} - ${item.title}`,
+            );
+            continue; // Skip this expired royalty
+          }
+        }
+
         const royaltyAmount = (lineTotal * royalty.royality) / 100;
 
         let storeRoyaltyAmount = royaltyAmount;
@@ -131,52 +135,32 @@ export async function POST(req: NextRequest) {
           quantity,
           unitPrice,
           royaltyPercentage: royalty.royality,
+          expiry: royalty.expiry, // Keep expiry info for transaction check
         });
       }
     }
-    // 1️⃣ Convert to store currency if needed
-    // let storeRoyaltyAmount = royaltyAmount;
-    // if (currency !== storeCurrency) {
-    //   storeRoyaltyAmount = await convertCurrency(
-    //     royaltyAmount,
-    //     currency,
-    //     storeCurrency,
-    //   );
-    // }
-
-    // // 2️⃣ Convert to USD if storeCurrency is not USD
-    // const usdRoyaltyAmount =
-    //   storeCurrency === "USD"
-    //     ? storeRoyaltyAmount
-    //     : await convertCurrency(storeRoyaltyAmount, storeCurrency, "USD");
-
-    // // 3️⃣ Push line item with both store and USD amounts
-    // lineItemsToAdd.push({
-    //   productId: royalty.productId,
-    //   title: item.title,
-    //   variantId: item.variant_id?.toString() || "",
-    //   variantTitle: item.variant_title || "",
-    //   designerId: royalty.designerId,
-    //   productRoyaltyAmount: {
-    //     original: royaltyAmount,   // original order currency
-    //     store: storeRoyaltyAmount, // store currency
-    //     usd: usdRoyaltyAmount,     // USD
-    //   },
-    //   quantity,
-    //   unitPrice,
-    //   royaltyPercentage: royalty.royality,
-    // });
 
     if (!lineItemsToAdd.length) {
       return NextResponse.json({
         success: true,
-        message: `Order ${orderId} has no royalty items`,
+        message: `Order ${orderId} has no valid royalty items (may be expired)`,
       });
     }
 
-    // 🔥 Create royalty transactions using Promise.allSettled
+    // 🔥 Create royalty transactions only if not expired (double-check)
     const transactionResults = await Promise.allSettled(
       lineItemsToAdd.map(async (li) => {
+        // ✅ Double-check expiry date before creating transaction
+        if (li.expiry) {
+          const expiryDate = new Date(li.expiry);
+          if (expiryDate.getTime() < Date.now()) {
+            console.log(
+              `⚠️ Skipping transaction for ${li.title} → royalty expired`,
+            );
+            return null;
+          }
+        }
+
         try {
           await createRoyaltyTransactionForOrder({
             shop,
@@ -188,7 +172,9 @@ export async function POST(req: NextRequest) {
             currency: storeCurrency,
             royaltyPercentage: li.royaltyPercentage,
             designerId: li.designerId,
+            shopifyTransactionChargeId: "", 
           });
+          console.log(`✅ Created transaction for ${li.title}`);
         } catch (error: any) {
           if (
             error.message?.includes("already exists") ||
@@ -225,13 +211,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const successfulTransactions = transactionResults.filter(
+      (r) => r.status === "fulfilled" && r.value !== null
+    ).length;
+
     console.log(
-      `✅ Order ${orderId} processed with ${lineItemsToAdd.length} royalty transactions`,
+      `✅ Order ${orderId} processed with ${successfulTransactions} royalty transactions created`,
     );
 
     return NextResponse.json({
       success: true,
-      royaltyOrder: { orderId, orderName, count: lineItemsToAdd.length },
+      royaltyOrder: { 
+        orderId, 
+        orderName, 
+        totalItems: lineItemsToAdd.length,
+        transactionsCreated: successfulTransactions
+      },
     });
   } catch (error: any) {
     console.error("❌ Error processing order webhook:", error);

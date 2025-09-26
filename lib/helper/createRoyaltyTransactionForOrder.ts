@@ -2,29 +2,12 @@ import prisma from "@/lib/db/prisma-connect";
 import { findSessionsByShop } from "@/lib/db/session-storage";
 import { convertCurrency } from "@/lib/config/currency-utils";
 
+export const dynamic = "force-dynamic";
+
+
 const API_VERSION = "2025-07";
 
-interface CreateRoyaltyTxParams {
-  shop: string;
-  orderId: string;
-  orderName: string;
-  productId: string;
-  description: string;
-  price: number;
-  currency: string;
-  royaltyPercentage: number;
-  designerId: string;
-}
 
-type SessionType = {
-  accessToken: string;
-  shop: string;
-  id: string;
-  scope?: string;
-  state?: string;
-  isOnline?: boolean;
-  expires?: string | undefined;
-};
 
 async function getActiveRoyaltySubscriptionByShop(shop: string) {
   const normalizedShop = shop.toLowerCase();
@@ -45,6 +28,7 @@ export async function createRoyaltyTransactionForOrder({
   price, // raw amount (INR, etc.)
   currency,
   royaltyPercentage,
+  shopifyTransactionChargeId,
   designerId,
 }: CreateRoyaltyTxParams) {
   // 1️⃣ Skip if price invalid
@@ -70,11 +54,12 @@ export async function createRoyaltyTransactionForOrder({
   // 3️⃣ Check if transaction already exists
   const existingTx = await prisma.royaltyTransaction.findUnique({
     where: {
-      shop_orderId_productId_designerId: {
+      shop_orderId_productId_shopifyTransactionChargeId_designerId: {
         shop,
         orderId,
         productId,
-        designerId: designerId || "",
+        shopifyTransactionChargeId: shopifyTransactionChargeId || "",
+        designerId,
       },
     },
   });
@@ -118,14 +103,19 @@ export async function createRoyaltyTransactionForOrder({
         }),
       },
     );
-
+  
+    console.log("📡 Shopify usage charge response status:", resp.status);
+  
     const data = await resp.json();
-
+  
+    // 🔍 Print full response for debugging
+    console.log("📦 Full Shopify usage charge response:", JSON.stringify(data, null, 2));
+  
     if (!resp.ok || !data.usage_charge) {
       console.error("❌ Shopify usage charge failed:", data);
       throw new Error(`Shopify usage charge failed: ${JSON.stringify(data)}`);
     }
-
+  
     usageChargeData = data.usage_charge;
     console.log(
       `✅ Shopify usage charge created [id=${usageChargeData.id}, price=${usageChargeData.price} USD]`,
@@ -134,7 +124,7 @@ export async function createRoyaltyTransactionForOrder({
     console.error("❌ Error creating Shopify usage charge:", err);
     throw err;
   }
-
+  
   // 5️⃣ Save transaction in DB with race-condition protection
   let royaltyTransaction;
   try {
@@ -152,10 +142,9 @@ export async function createRoyaltyTransactionForOrder({
           usd: parseFloat(usageChargeData.price),
         },
         currency: "USD",
+        status: usageChargeData.status || "success",
         balanceUsed: parseFloat(usageChargeData.balance_used ?? "0"),
-        balanceRemaining: parseFloat(
-          usageChargeData.balance_remaining ?? "0",
-        ),
+        balanceRemaining: parseFloat(usageChargeData.balance_remaining ?? "0"),
         royaltyPercentage,
         designerId: designerId || null,
         createdAt: new Date(usageChargeData.created_at),
@@ -169,11 +158,12 @@ export async function createRoyaltyTransactionForOrder({
       );
       royaltyTransaction = await prisma.royaltyTransaction.findUnique({
         where: {
-          shop_orderId_productId_designerId: {
+          shop_orderId_productId_shopifyTransactionChargeId_designerId: {
             shop,
             orderId,
             productId,
-            designerId: designerId || "",
+            shopifyTransactionChargeId: shopifyTransactionChargeId || "",
+            designerId,
           },
         },
       });

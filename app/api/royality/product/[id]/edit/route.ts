@@ -1,72 +1,3 @@
-// import { NextRequest, NextResponse } from "next/server";
-// import prisma from "@/lib/db/prisma-connect";
-
-// export async function PUT(
-//   req: NextRequest,
-//   { params }: { params: { id: string } }
-// ) {
-//   try {
-//     const { id } = params;
-//     const { searchParams } = new URL(req.url);
-//     const shop = searchParams.get("shop");
-
-//     if (!shop) {
-//       return NextResponse.json(
-//         { error: "Missing shop parameter" },
-//         { status: 400 }
-//       );
-//     }
-
-//     if (!id) {
-//       return NextResponse.json(
-//         { error: "Missing product ID in URL" },
-//         { status: 400 }
-//       );
-//     }
-
-//     const body = await req.json();
-//     const { designerId, Royality } = body;
-
-//     if (Royality !== undefined && isNaN(Royality)) {
-//       return NextResponse.json(
-//         { error: "Invalid Royality value" },
-//         { status: 400 }
-//       );
-//     }
-
-//     // Find the royalty record directly by raw Shopify product ID
-//     const royalty = await prisma.productRoyalty.findFirst({
-//       where: { shopifyId: id, shop },
-//     });
-
-//     if (!royalty) {
-//       return NextResponse.json(
-//         { error: "No royalty found for this product" },
-//         { status: 404 }
-//       );
-//     }
-
-//     // Update royalty
-//     const updatedRoyalty = await prisma.productRoyalty.update({
-//       where: { id: royalty.id },
-//       data: {
-//         ...(designerId && { designerId }),
-//         ...(Royality !== undefined && { Royality: parseFloat(Royality) }),
-//       },
-//     });
-
-//     return NextResponse.json({
-//       message: "Royalty updated successfully",
-//       royalty: updatedRoyalty,
-//     });
-//   } catch (error: any) {
-//     console.error("Error updating royalty:", error);
-//     return NextResponse.json(
-//       { error: error.message || "Internal Server Error" },
-//       { status: 500 }
-//     );
-//   }
-// }
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma-connect";
 import {
@@ -84,7 +15,6 @@ export async function PUT(
     const { searchParams } = new URL(req.url);
     const shop = searchParams.get("shop");
 
-    // ✅ Validate required query params
     if (!shop) {
       return NextResponse.json(
         { error: ERROR_MESSAGES_edit.MISSING_SHOP },
@@ -100,7 +30,9 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { designerId, Royality } = body;
+    const { Royality, expiry } = body;
+
+    const updateData: any = {};
 
     // ✅ Validate Royality if provided
     if (Royality !== undefined) {
@@ -115,6 +47,26 @@ export async function PUT(
           { status: 400 },
         );
       }
+      updateData.royality = numericRoyalty;
+    }
+
+    // ✅ Validate expiry if provided
+    if (expiry !== undefined) {
+      const parsed = new Date(expiry);
+      if (isNaN(parsed.getTime())) {
+        return NextResponse.json(
+          { error: "Invalid expiry date format" },
+          { status: 400 },
+        );
+      }
+      updateData.expiry = parsed;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: "No valid fields provided (Royality or expiry required)" },
+        { status: 400 },
+      );
     }
 
     // ✅ Find royalty record
@@ -132,10 +84,7 @@ export async function PUT(
     // ✅ Update royalty
     const updatedRoyalty = await prisma.productRoyalty.update({
       where: { id: royalty.id },
-      data: {
-        ...(designerId && { designerId }),
-        ...(Royality !== undefined && { royality: parseFloat(Royality) }),
-      },
+      data: updateData,
     });
 
     return NextResponse.json({

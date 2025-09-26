@@ -9,60 +9,13 @@ import {
   Text,
   Badge,
   Divider,
-  List,
   Box,
 } from "@shopify/polaris";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/app/components/redux/store";
-import { fetchExchangeRate } from "@/app/components/redux/currencySlice";
+import { RootState } from "@/app/redux/store";
+import { fetchExchangeRate } from "@/app/redux/currencySlice";
 import { useEffect } from "react";
 
-interface LineItem {
-  productId: string;
-  title: string;
-  variantId: string;
-  variantTitle?: string;
-  designerId: string;
-  royality: number;
-  amount: number;
-  quantity: number;
-  unitPrice: number;
-  royaltyPercentage: number;
-  royaltyCharges: number;
-}
-
-interface Transaction {
-  id: string;
-  shop: string;
-  shopifyTransactionChargeId: string;
-  orderId: string;
-  productId?: string;
-  description: string;
-  price: {
-    storeprice: number;
-    storeCurrency: string;
-    usd: number;
-  };
-  currency: string; // USD
-  balanceUsed: number;
-  balanceRemaining: number;
-  royaltyPercentage: number;
-  designerId: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface RoyaltyOrder {
-  id: string;
-  orderName: string;
-  orderId: string;
-  currency: string;
-  createdAt?: string;
-  calculatedRoyaltyAmount: number;
-  convertedCurrencyAmountRoyality: number;
-  lineItem: LineItem[];
-  transactions?: Transaction[];
-}
 
 interface OrderModalProps {
   order: RoyaltyOrder;

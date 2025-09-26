@@ -2,16 +2,6 @@
 
 import { Card, BlockStack, InlineStack, Text, Spinner, Button, Icon, Box } from "@shopify/polaris";
 
-interface ActionCardProps {
-  title: string;
-  description?: string;
-  icon?: any;
-  action?: () => void;
-  buttonText?: string;
-  value?: string | number;
-  loading?: boolean;
-}
-
 export default function ActionCard({
   title,
   description,
@@ -41,7 +31,7 @@ export default function ActionCard({
             variant="headingLg"
             fontWeight="semibold"
             alignment="center"
-            tone="magic"
+            tone="subdued"
           >
             {title}
           </Text>
@@ -49,7 +39,7 @@ export default function ActionCard({
           {description ? (
             <Text
               as="p"
-              tone="magic-subdued"
+              tone="subdued"
               variant="bodyMd"
               alignment="center"
             >
@@ -61,10 +51,11 @@ export default function ActionCard({
             </InlineStack>
           ) : (
             <Text
-              variant="heading2xl"
+              variant="headingLg"
               as="h3"
-              fontWeight="bold"
+              fontWeight="semibold"
               alignment="center"
+              tone="subdued"
             >
               {value}
             </Text>
@@ -73,7 +64,7 @@ export default function ActionCard({
 
         {buttonText && action && (
           <InlineStack align="center">
-            <Button onClick={action} variant="secondary" size="slim">
+            <Button onClick={action} variant="primary" size="slim">
               {buttonText}
             </Button>
           </InlineStack>

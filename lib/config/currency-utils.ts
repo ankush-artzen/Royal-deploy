@@ -1,4 +1,3 @@
-// 1️⃣ Get Exchange Rate
 export async function getExchangeRate(
   from: string,
   to: string,

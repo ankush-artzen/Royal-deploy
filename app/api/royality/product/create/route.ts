@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
       inArchive = "false",
       price = 0,
       shopifyId,
+      expiry,
     } = body;
 
     // ✅ Validation
@@ -69,7 +70,8 @@ export async function POST(req: NextRequest) {
       !royality ||
       isNaN(royality) ||
       !title ||
-      !designerId
+      !designerId ||
+      !expiry
     ) {
       console.warn("⚠️ Validation failed:", {
         shop,
@@ -77,11 +79,12 @@ export async function POST(req: NextRequest) {
         royality,
         title,
         designerId,
+        expiry,
       });
       return NextResponse.json(
         {
           error:
-            "Missing or invalid shop, productId, title, Royality, or designerId",
+            "Missing or invalid shop, productId, title, Royality, designerId, or expiry",
         },
         { status: 400 },
       );
@@ -90,11 +93,19 @@ export async function POST(req: NextRequest) {
     // ✅ Designer ID format check
     const designerIdPattern = /^RA\d{9}$/;
     if (!designerIdPattern.test(designerId)) {
-      console.warn("⚠️ Invalid Designer ID format:", designerId);
       return NextResponse.json(
         {
           error: `Invalid Designer ID format: ${designerId}. Expected format: RA#########`,
         },
+        { status: 400 },
+      );
+    }
+
+    // ✅ Expiry date
+    const expiryDate = new Date(expiry);
+    if (isNaN(expiryDate.getTime())) {
+      return NextResponse.json(
+        { error: "Invalid expiry date format" },
         { status: 400 },
       );
     }
@@ -178,11 +189,12 @@ export async function POST(req: NextRequest) {
         royality: parseFloat(royality),
         shop,
         price: {
-          amount: convertedAmount, // 💵 normalized in USD
+          amount: convertedAmount,
           currency: targetCurrency, // "USD"
           storeCurrency, // 🏪 actual shop currency
           storeAmount: originalAmount, // original price in store currency
         },
+        expiry: expiryDate, // <-- save expiry
       },
     });
 

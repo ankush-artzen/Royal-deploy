@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma-connect";
 import { PAGINATION, DATE_RANGE } from "@/lib/constants/constants";
 
+export const dynamic = "force-dynamic";
+
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);

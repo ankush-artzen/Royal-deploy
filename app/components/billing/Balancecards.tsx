@@ -8,17 +8,6 @@ import {
   Box,
 } from "@shopify/polaris";
 
-interface BalanceCardsProps {
-  loadingTx: boolean;
-  latestTransaction: any;
-  shopCurrency: string | null;
-  balanceUsedINR: number | null;
-  balanceRemainingINR: number | null;
-  cappedAmount: number | null;
-  cappedCurrency: string | null;
-  cappedAmountINR: number | null;
-}
-
 const BalanceCards = ({
   loadingTx,
   latestTransaction,
@@ -72,40 +61,44 @@ const BalanceCards = ({
     }
   };
 
+  // Consistent card width for both loading and content states
+  const cardWidth = "400px";
+
   return (
     <Card>
       <BlockStack gap="400">
         <Banner title="Royalty Amount Status" tone="info" />
 
         {loadingTx && (
-          <BlockStack gap="200">
-            <InlineStack align="start" blockAlign="center" gap="200">
-              {[1, 2].map((i) => (
-                <Card key={i}>
-                  <Box minWidth="360px" minHeight="100px" padding="400">
-                    <InlineStack align="center" blockAlign="center">
-                      <Spinner
-                        accessibilityLabel={`Loading balance ${i}`}
-                        size="large"
-                      />
-                    </InlineStack>
-                  </Box>
-                </Card>
-              ))}
-            </InlineStack>
-          </BlockStack>
+          <InlineStack align="center" gap="400">
+            {[1, 2].map((i) => (
+              <Card key={i}>
+                <Box width={cardWidth} minHeight="100px" padding="400">
+                  <InlineStack align="center" blockAlign="center" gap="200">
+                    <Spinner
+                      accessibilityLabel={`Loading balance ${i}`}
+                      size="large"
+                    />
+                    <Text as="p" tone="subdued">
+                      Loading...
+                    </Text>
+                  </InlineStack>
+                </Box>
+              </Card>
+            ))}
+          </InlineStack>
         )}
 
         {!loadingTx && (
-          <BlockStack gap="200">
-            <InlineStack align="start" blockAlign="center" gap="800">
-              {/* Balance Used */}
-              <Card>
-                <Box minWidth="400px" minHeight="100px" padding="400">
+          <InlineStack align="center" gap="400">
+            {/* Balance Used */}
+            <Card background="bg-surface-info">
+              <Box width={cardWidth} minHeight="100px" padding="400">
+                <BlockStack gap="200">
                   <Text as="h3" variant="headingXl" tone="subdued">
                     Balance Used
                   </Text>
-                  <Text as="p"tone="subdued">
+                  <Text as="p" tone="subdued">
                     Total amount already utilized from your subscription capped
                     amount
                   </Text>
@@ -119,18 +112,19 @@ const BalanceCards = ({
                       ? "critical"
                       : "success",
                   )}
-                </Box>
-              </Card>
+                </BlockStack>
+              </Box>
+            </Card>
 
-       
-              {/* Capped Amount */}
-              <Card>
-                <Box minWidth="400px" minHeight="100px" padding="400">
+            {/* Capped Amount */}
+            <Card background="bg-surface-info">
+              <Box width={cardWidth} minHeight="100px" padding="400">
+                <BlockStack gap="200">
                   <Text as="h3" variant="headingXl" tone="subdued">
                     Capped Amount
                   </Text>
-                <Text as="p" tone="subdued">
-                    Maximum allowed spending limit for your subscription{" "}
+                  <Text as="p" tone="subdued">
+                    Maximum allowed Capped amount spending limit for your plan
                   </Text>
                   {renderBalanceCard(
                     "Capped Amount",
@@ -139,10 +133,10 @@ const BalanceCards = ({
                     cappedAmountINR,
                     "subdued",
                   )}
-                </Box>
-              </Card>
-            </InlineStack>
-          </BlockStack>
+                </BlockStack>
+              </Box>
+            </Card>
+          </InlineStack>
         )}
       </BlockStack>
     </Card>
@@ -150,4 +144,3 @@ const BalanceCards = ({
 };
 
 export default BalanceCards;
-

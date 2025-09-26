@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma-connect";
 
+export const dynamic = "force-dynamic";
+
+
 async function getActiveRoyaltySubscriptionByShop(shop: string) {
   const normalizedShop = shop.toLowerCase();
   console.log("🔎 Checking active subscription for shop:", normalizedShop);

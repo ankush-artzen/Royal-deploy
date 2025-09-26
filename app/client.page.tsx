@@ -15,8 +15,8 @@ import { useRouter } from "next/navigation";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import ActionCard from "@/app/components/ActionCard";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState, AppDispatch } from "@/app/components/redux/store";
-import { fetchExchangeRate } from "@/app/components/redux/currencySlice";
+import { RootState, AppDispatch } from "@/app/redux/store";
+import { fetchExchangeRate } from "@/app/redux/currencySlice";
 
 export default function HomePage() {
   const router = useRouter();
@@ -45,7 +45,7 @@ export default function HomePage() {
     // INR store → convert to USD
     if (shopCurrency === "INR") {
       const key = "INR-USD";
-      const rate = currencyState.rates[key];
+      const rate = currencyState.rates ? currencyState.rates[key] : null;
       if (rate) {
         const converted = totalRoyaltyAmount * rate;
         return `${converted.toFixed(2)} USD`;
@@ -124,31 +124,14 @@ export default function HomePage() {
   }, [shop]);
 
   return (
-    <Page>
+    <Page title="Royalty App Dashboard" subtitle="Enhance your sale">
       <Layout>
         {/* Hero Section */}
         <Layout.Section>
-          <Card padding="400">
-            <BlockStack gap="400" align="center">
-              <Text
-                variant="heading2xl"
-                as="h1"
-                tone="magic"
-                alignment="center"
-              >
-                Welcome to Royalty App
-              </Text>
-              <Text
-                as="p"
-                variant="bodyLg"
-                tone="magic-subdued"
-                alignment="center"
-              >
-                Effortlessly manage products, assign royalties, and track
-                performance
-              </Text>
-            </BlockStack>
-          </Card>
+          <Banner title="Welcome to Royalty App" tone="info">
+            Effortlessly manage products, assign royalties, and track
+            performance
+          </Banner>
         </Layout.Section>
 
         {/* Error Banner */}
@@ -164,7 +147,12 @@ export default function HomePage() {
         <Layout.Section>
           <Card>
             <BlockStack gap="400">
-              <Text as="h3" variant="headingLg" fontWeight="semibold">
+              <Text
+                as="h3"
+                variant="headingLg"
+                tone="subdued"
+                fontWeight="semibold"
+              >
                 Quick Actions
               </Text>
               <div
@@ -200,9 +188,14 @@ export default function HomePage() {
 
         {/* Quick Insights */}
         <Layout.Section>
-          <Card>
+          <Card padding="400">
             <BlockStack gap="400">
-              <Text as="h2" fontWeight="bold" variant="headingLg">
+              <Text
+                as="h2"
+                fontWeight="bold"
+                tone="subdued"
+                variant="headingLg"
+              >
                 Quick Insights
               </Text>
               <div
@@ -235,12 +228,9 @@ export default function HomePage() {
 
         {/* About Us */}
         <Layout.Section>
-          <Card>
-            <Text as="h2" fontWeight="bold" variant="headingLg">
-              About Us
-            </Text>
+          <Banner title="About us" tone="info">
             <BlockStack gap="200" align="center">
-              <Text as="h2" variant="bodyLg" tone="magic-subdued">
+              <Text as="h2" variant="bodyLg" tone="subdued">
                 A royalty management system that tracks and calculates payments
                 owed to creators. Collect sales data, aggregate earnings, and
                 ensure timely distribution with ease.
@@ -248,13 +238,13 @@ export default function HomePage() {
               <InlineStack>
                 <Button
                   onClick={() => router.push("/royalty/create")}
-                  variant="secondary"
+                  variant="primary"
                 >
                   Get Started
                 </Button>
               </InlineStack>
             </BlockStack>
-          </Card>
+          </Banner>
         </Layout.Section>
       </Layout>
     </Page>

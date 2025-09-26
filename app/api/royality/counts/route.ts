@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma-connect";
 import { findSessionsByShop } from "@/lib/db/session-storage";
 
+export const dynamic = "force-dynamic";
+
+
 const API_VERSION = "2025-07";
 
 async function getShopCurrency(shop: string) {

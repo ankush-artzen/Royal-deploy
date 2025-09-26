@@ -6,24 +6,10 @@ import {
   InlineStack,
   Spinner,
   List,
+  Box,
+  ProgressBar,
+  InlineGrid,
 } from "@shopify/polaris";
-
-interface BillingBannerProps {
-  billingLoading: boolean;
-  billingApproved: boolean;
-  creatingPlan: boolean;
-  startRoyaltyPlan: () => void;
-  balanceUsed: number;
-  cappedAmount: number | null;
-  cappedCurrency?: string;
-  updatingCappedAmount: boolean;
-  updateError: string | null;
-  handleManualUpdate: (amount?: number) => void;
-  manualAmount: string;
-  setManualAmount: (amount: string) => void;
-  chargeId?: string | null; // ← added
-  status?: string | null; // ← added
-}
 
 const BillingBanner = ({
   billingLoading,
@@ -32,16 +18,13 @@ const BillingBanner = ({
   startRoyaltyPlan,
   balanceUsed,
   cappedAmount,
-  cappedCurrency,
+  cappedCurrency = "USD",
   updatingCappedAmount,
   updateError,
   handleManualUpdate,
   chargeId,
   status,
 }: BillingBannerProps) => {
-  // Now you can use chargeId and status inside the component
-  console.log("Charge ID:", chargeId);
-  console.log("Billing Status:", status);
   const isNinetyPercentUsed = () => {
     if (
       !billingApproved ||
@@ -56,10 +39,13 @@ const BillingBanner = ({
     }
 
     const percentageUsed = (balanceUsed / cappedAmount) * 100;
-    return percentageUsed >= 10;
+    return percentageUsed >= 90;
   };
 
   const canEnableBilling = !billingApproved || isNinetyPercentUsed();
+  const percentageUsed =
+    cappedAmount && cappedAmount > 0 ? (balanceUsed / cappedAmount) * 100 : 0;
+  const isActive = status === "active";
 
   if (billingLoading) {
     return (
@@ -110,18 +96,61 @@ const BillingBanner = ({
           <List.Item>Automatically distribute payments to designers</List.Item>
         </List>
 
+        {/* Usage Progress Section */}
+
+        {billingApproved && cappedAmount && isActive && (
+          <Box padding="100" borderRadius="100">
+            <BlockStack gap="300">
+              <InlineStack align="space-between" blockAlign="center">
+                <Text as="h3" variant="bodyLg" fontWeight="bold">
+                  Usage Summary
+                </Text>
+                {percentageUsed.toFixed(1)}% Used
+              </InlineStack>
+
+              <ProgressBar
+                progress={percentageUsed}
+                size="medium"
+                tone={
+                  percentageUsed < 50
+                    ? "highlight"
+                    : percentageUsed < 75
+                      ? "success"
+                      : percentageUsed < 90
+                        ? "critical"
+                        : "critical"
+                }
+              />
+
+              <InlineGrid columns="1fr auto" gap="200">
+                <Text as="h2" variant="bodySm" tone="subdued" fontWeight="bold">
+                  Current usage: {balanceUsed.toLocaleString()} {cappedCurrency}
+                </Text>
+                <Text as="h2" variant="bodySm" tone="subdued" fontWeight="bold">
+                  Capped Amount: {(cappedAmount || 0).toLocaleString()}{" "}
+                  {cappedCurrency}
+                </Text>
+              </InlineGrid>
+            </BlockStack>
+          </Box>
+        )}
+
         <InlineStack align="start">
           {/* Show Update Capped Amount button if approved & nearing limit */}
-          {billingApproved && status == "active" && isNinetyPercentUsed() && (
-            <Button
-              variant="primary"
-              loading={updatingCappedAmount}
-              onClick={() => handleManualUpdate()}
-              disabled={updatingCappedAmount}
-            >
-              Update Capped Amount
-            </Button>
-          )}
+          {billingApproved &&
+            status == "active" &&
+            chargeId &&
+            isNinetyPercentUsed() && (
+              <Button
+                variant="primary"
+                tone="critical"
+                loading={updatingCappedAmount}
+                onClick={() => handleManualUpdate()}
+                disabled={updatingCappedAmount}
+              >
+                Update Capped Amount
+              </Button>
+            )}
 
           {!billingApproved && status !== "active" && (
             <Button
