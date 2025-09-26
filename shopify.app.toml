@@ -3,12 +3,12 @@
 client_id = "6ac50fbc61ef6c598b1519b6879336c7"
 name = "Royal-app-local"
 handle = "royal-app-local"
-application_url = "https://f123ddeacc6e.ngrok-free.app"
+application_url = "https://zulma-palatial-violette.ngrok-free.dev"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
-dev_store_url = "artzen-demo.myshopify.com"
+dev_store_url = "karan-working.myshopify.com"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
@@ -16,9 +16,9 @@ scopes = "read_checkouts,read_customers,read_orders,read_products,write_checkout
 
 [auth]
 redirect_urls = [
-  "https://f123ddeacc6e.ngrok-free.app/auth/callback",
-  "https://f123ddeacc6e.ngrok-free.app/auth/shopify/callback",
-  "https://f123ddeacc6e.ngrok-free.app/api/auth/callback"
+  "https://zulma-palatial-violette.ngrok-free.dev/auth/callback",
+  "https://zulma-palatial-violette.ngrok-free.dev/auth/shopify/callback",
+  "https://zulma-palatial-violette.ngrok-free.dev/api/auth/callback"
 ]
 
 [webhooks]
