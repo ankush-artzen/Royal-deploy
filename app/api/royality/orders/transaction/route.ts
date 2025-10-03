@@ -4,7 +4,6 @@ import { PAGINATION, DATE_RANGE } from "@/lib/constants/constants";
 
 export const dynamic = "force-dynamic";
 
-
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -66,7 +65,7 @@ export async function GET(req: NextRequest) {
     };
 
     const sanitizedTransactions = transactions.map((tx) => {
-      const price = tx.price as PriceJson | null; 
+      const price = tx.price as PriceJson | null;
 
       return {
         id: tx.id,
@@ -84,6 +83,8 @@ export async function GET(req: NextRequest) {
             }
           : { storeprice: null, storeCurrency: null, usd: null },
         currency: tx.currency || "USD",
+        status: tx.status || "pending", 
+
         balanceUsed: tx.balanceUsed || 0,
         balanceRemaining: tx.balanceRemaining || 0,
         royaltyPercentage: tx.royaltyPercentage || 0,

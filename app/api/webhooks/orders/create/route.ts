@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         const allRoyalties = await tx.productRoyalty.findMany({
           where: {
             shop,
-            inArchive: false,
+            // inArchive: false,
             OR: [
               { shopifyId: { in: productIds } },
               { shopifyId: { in: productIdGids } },
@@ -98,9 +98,11 @@ export async function POST(req: NextRequest) {
 
           // const royalties = royaltiesMap.get(productId) || [];
           // if (!royalties.length) continue;
-          const royalties = (royaltiesMap.get(productId) || []).filter(
-            (r) => !r.inArchive,
-          );
+          // const royalties = (royaltiesMap.get(productId) || []).filter(
+          //   (r) => !r.inArchive,
+          // );
+          const royalties = royaltiesMap.get(productId) || [];
+          if (!royalties.length) continue;
           if (!royalties.length) continue;
 
           const quantity = item.quantity;
@@ -271,7 +273,7 @@ export async function POST(req: NextRequest) {
               console.log(
                 `⚠️ Skipping transaction for ${li.title} → product royalty expired`,
               );
-              continue; 
+              continue;
             }
           }
 

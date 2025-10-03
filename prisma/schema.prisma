@@ -67,7 +67,14 @@ model Designer {
   royalties           ProductRoyalty[]
 }
 
-
+model user{
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  royalId      String   @unique
+  email        String   @unique
+  phoneNumber  String   @unique
+  password     String 
+  createdAt    DateTime @default(now())
+}
 
 model ProductRoyalty {
   id                  String    @id @default(auto()) @map("_id") @db.ObjectId

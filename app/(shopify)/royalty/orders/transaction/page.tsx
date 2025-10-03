@@ -13,7 +13,10 @@ import {
   Banner,
   Badge,
   BlockStack,
+  Spinner,
 } from "@shopify/polaris";
+import moment from "moment";
+
 import { useRouter } from "next/navigation";
 import CustomDataTable from "@/app/components/CustomDataTable";
 import Pagination from "@/app/components/Pagination";
@@ -22,6 +25,11 @@ import {
   TransactionIcon,
   InfoIcon,
 } from "@shopify/polaris-icons";
+
+import { useShopCurrency } from "@/app/hooks/shopCurrency";
+import SummaryCards from "@/app/components/SummaryCards";
+
+import { useBillingStatus } from "@/app/hooks/useBillingStatus";
 
 export default function RoyaltyTransactionsPage() {
   const app = useAppBridge();
@@ -36,12 +44,21 @@ export default function RoyaltyTransactionsPage() {
   const limit = 10;
   const [totalPages, setTotalPages] = useState(1);
 
+  const { currency: shopCurrency, loading: currencyLoading } =
+    useShopCurrency(shop);
+
   const [summary, setSummary] = useState<SummaryResponse>({
     totalTransactions: 0,
     totalRevenue: 0,
     avgRoyalty: 0,
   });
-
+  const { approved: billingApproved, loading: billingLoading } =
+    useBillingStatus();
+  useEffect(() => {
+    if (!billingLoading && billingApproved === false) {
+      router.replace("/royalty/billing"); //send to billing
+    }
+  }, [billingLoading, billingApproved, router]);
   useEffect(() => {
     try {
       const shopFromConfig = (app as any)?.config?.shop;
@@ -114,8 +131,10 @@ export default function RoyaltyTransactionsPage() {
       {tx.shopifyTransactionChargeId}
     </Badge>,
     <Box key={`${tx.id}-price`}>
-      <Text as="span" fontWeight="bold" tone="success">
-        ${tx.price.usd.toFixed(2)}
+      <Text as="span" fontWeight="bold">
+        {currencyLoading
+          ? "Loading..."
+          : `${shopCurrency} ${tx.price.usd.toFixed(2)}`}
       </Text>
     </Box>,
     <Text as="span" key={`${tx.id}-royalty`} fontWeight="bold" tone="subdued">
@@ -132,11 +151,8 @@ export default function RoyaltyTransactionsPage() {
       </Box>
     </Tooltip>,
     <Box key={`${tx.id}-created`}>
-      <Text as="span" variant="bodySm">
-        {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : "-"}
-      </Text>
-      <Text as="span" variant="bodySm" tone="subdued">
-        {tx.createdAt ? new Date(tx.createdAt).toLocaleTimeString() : ""}
+      <Text as="span" variant="bodySm" fontWeight="regular">
+        {tx.createdAt ? moment(tx.createdAt).format("lll") : "-"}
       </Text>
     </Box>,
   ]);
@@ -145,6 +161,7 @@ export default function RoyaltyTransactionsPage() {
     <Page
       title="Royalty Transactions"
       backAction={{ content: "Back", onAction: () => router.back() }}
+      fullWidth
     >
       {/* Error Banner */}
       {error && (
@@ -156,59 +173,30 @@ export default function RoyaltyTransactionsPage() {
       )}
 
       {/* Summary Cards */}
-      {!loading && transactions.length > 0 && (
-        <div style={{ marginBottom: "20px" }}>
-          <InlineGrid columns="1fr 1fr 1fr" gap="400">
-            <Card padding="400">
-              <div style={{ textAlign: "center" }}>
-                <Icon source={TransactionIcon} tone="base" />
-                <Text as="h3" variant="headingMd" fontWeight="bold">
-                  {summary.totalTransactions.toLocaleString()}
-                </Text>
-                <Text as="p" tone="subdued" fontWeight="bold">
-                  Total Transactions
-                </Text>
-                
-              </div>
-            </Card>
-
-            <Card padding="400">
-              <div style={{ textAlign: "center" }}>
-                <Icon source={CashDollarIcon} tone="success" />
-                <Text
-                  as="h3"
-                  variant="headingMd"
-                  fontWeight="bold"
-                  tone="success"
-                >
-                  {summary.totalRevenue.toFixed(2)}
-                </Text>
-                <Text as="p" tone="subdued" fontWeight="bold">
-                  Total Revenue
-                </Text>
-              </div>
-            </Card>
-
-            <Card padding="400">
-              <div style={{ textAlign: "center" }}>
-                <Icon source={InfoIcon} />
-                <Text
-                  as="h3"
-                  variant="headingMd"
-                  fontWeight="bold"
-                  tone="success"
-                >
-                  {summary.avgRoyalty.toFixed(1)}%
-                </Text>
-                <Text as="p" tone="subdued" fontWeight="bold">
-                  Avg Royalty
-                </Text>
-              </div>
-            </Card>
-          </InlineGrid>
-        </div>
-      )}
-
+      <SummaryCards
+        items={[
+          {
+            title: "Total Transactions",
+            value: summary.totalTransactions.toLocaleString(),
+            icon: TransactionIcon,
+            loading,
+          },
+          {
+            title: "Total Revenue",
+            value: `${currencyLoading ? "…" : shopCurrency} ${summary.totalRevenue.toFixed(2)}`,
+            icon: CashDollarIcon,
+            tone: "success",
+            loading,
+          },
+          {
+            title: "Avg Royalty",
+            value: `${summary.avgRoyalty.toFixed(1)}%`,
+            icon: InfoIcon,
+            tone: "success",
+            loading,
+          },
+        ]}
+      />
       {/* Data Table */}
       <CustomDataTable
         columns={[

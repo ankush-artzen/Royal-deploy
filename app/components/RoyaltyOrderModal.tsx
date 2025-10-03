@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Modal,
   Card,
@@ -14,15 +14,21 @@ import {
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/app/redux/store";
 import { fetchExchangeRate } from "@/app/redux/currencySlice";
-import { useEffect } from "react";
+import { useShopCurrency } from "@/app/hooks/shopCurrency";
+import moment from "moment";
 
+interface LineItemVariant {
+  variantTitle: string;
+  quantity: number;
+  unitPrice: number;
+  royality: number;
+  royaltyPercentage: number;
+}
 
-interface OrderModalProps {
-  order: RoyaltyOrder;
-  storeName: string;
-  active: boolean;
-  onClose: () => void;
-  loading?: boolean;
+interface LineItemProduct {
+  productId: string;
+  title: string;
+  variants: LineItemVariant[];
 }
 
 const OrderModal: React.FC<OrderModalProps> = ({
@@ -32,112 +38,20 @@ const OrderModal: React.FC<OrderModalProps> = ({
   onClose,
   loading = false,
 }) => {
+  const shop = storeName + ".myshopify.com";
   const dispatch = useDispatch();
   const rates = useSelector((state: RootState) => state.currency.rates);
+  const { currency: shopCurrency, loading: currencyLoading } =
+    useShopCurrency(shop);
 
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleString();
-
-  const renderCurrencyBadge = (currency: string) => (
-    <Badge tone={currency === "USD" ? "success" : "warning"}>{currency}</Badge>
-  );
   useEffect(() => {
-    order.lineItem.forEach((item) => {
-      const key = `${order.currency}-USD`;
-      if (!rates[key]) {
-        (dispatch as any)(
-          fetchExchangeRate({ from: order.currency, to: "USD" }),
-        );
-      }
-    });
-  }, [order.lineItem, rates, dispatch, order.currency]);
+    const key = `${order.currency}-USD`;
+    if (!rates[key]) {
+      (dispatch as any)(fetchExchangeRate({ from: order.currency, to: "USD" }));
+    }
+  }, [order.currency, rates, dispatch]);
+
   const transactions = order.transactions || [];
-
-  const renderProductRow = (product: LineItem) => (
-    <Box paddingBlock="200">
-      <InlineStack align="start" blockAlign="center">
-        <Text as="h3" variant="headingMd">
-          {product.title || "Unknown Product"}
-        </Text>
-      </InlineStack>
-
-      <Box paddingBlockStart="100">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "150px 1fr", // labels | values
-            rowGap: "16px", // equal spacing between rows
-            columnGap: "24px",
-            alignItems: "center",
-          }}
-        >
-          {product.variantTitle && (
-            <>
-              <Text as="span" tone="subdued">
-                Variant:
-              </Text>
-              <Text as="span">{product.variantTitle}</Text>
-            </>
-          )}
-
-          <Text as="span" tone="subdued">
-            Qty:
-          </Text>
-          <Text as="span">{product.quantity}</Text>
-
-          <Text as="span" tone="subdued">
-            Unit Price:
-          </Text>
-          <Text as="span">
-            {product.unitPrice.toFixed(2)} {order.currency}
-          </Text>
-
-          <Text as="span" tone="subdued">
-            Royalty %:
-          </Text>
-          <Text as="span">{product.royaltyPercentage}%</Text>
-        </div>
-      </Box>
-    </Box>
-  );
-
-  const renderTransactionRow = (tx: Transaction) => (
-    <Box paddingBlock="200">
-      <InlineStack align="space-between" blockAlign="center">
-        <Text as="span" fontWeight="medium">
-          Charge ID: {tx.shopifyTransactionChargeId}
-        </Text>
-        <Text as="h2" fontWeight="bold">
-          Royalty Price : {tx.price.storeprice.toFixed(2)}{" "}
-          {tx.price.storeCurrency}
-        </Text>
-        {/* <Text as="h2">
-          Royalty Price (USD): {tx.price.usd.toFixed(2)} {tx.currency}
-        </Text> */}
-
-        <Text as="h2">
-          Royalty %:{" "}
-          {typeof tx.royaltyPercentage === "number"
-            ? `${tx.royaltyPercentage.toFixed(2)}`
-            : "-"}
-        </Text>
-        {/*
-        // Uncomment if you want balance info
-        <Text as="h2">
-          Balance Used: {tx.balanceUsed.toFixed(2)} {tx.currency}
-        </Text>
-        <Text as="h2">
-          Balance Remaining: {tx.balanceRemaining.toFixed(2)} {tx.currency}
-        </Text>
-        */}
-      </InlineStack>
-      {tx.description && (
-        <Text as="span" tone="subdued">
-          Description: {tx.description}
-        </Text>
-      )}
-    </Box>
-  );
 
   return (
     <Modal
@@ -161,59 +75,43 @@ const OrderModal: React.FC<OrderModalProps> = ({
       <BlockStack gap="400">
         {/* Order Summary */}
         <Card>
-          <BlockStack gap="300">
-            <InlineStack align="space-between" blockAlign="center">
-              <Text as="h2" variant="headingLg">
-                Order Summary
-              </Text>
-              {/* {renderCurrencyBadge(order.currency)} */}
-            </InlineStack>
-
+          <BlockStack gap="400">
+            <Text as="h2" variant="headingLg">
+              Order Summary
+            </Text>
             <Divider />
-
-            <InlineStack gap="200">
-              <Text as="span" tone="subdued">
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "200px 1fr",
+                rowGap: "16px",
+                columnGap: "24px",
+                alignItems: "center",
+              }}
+            >
+              <Text as="span" tone="subdued" fontWeight="semibold">
                 Order Date
               </Text>
-              <Text as="span" fontWeight="medium">
-                {order.createdAt ? formatDate(order.createdAt) : "-"}
+              <Text as="span" fontWeight="regular">
+                {order.createdAt ? moment(order.createdAt).format("lll") : "-"}
               </Text>
-            </InlineStack>
 
-            <InlineStack gap="400">
-              <Text as="span" tone="subdued">
+              <Text as="span" tone="subdued" fontWeight="semibold">
                 Order ID
               </Text>
-              <Text as="span" fontWeight="medium">
+              <Text as="span" fontWeight="regular">
                 {order.orderId}
               </Text>
-            </InlineStack>
 
-            <InlineStack gap="400">
-              <Text as="span" tone="subdued">
+              <Text as="span" tone="subdued" fontWeight="semibold">
                 Total Royalty Amount
               </Text>
               <Text as="span" fontWeight="bold" variant="headingMd">
-                USD {order.convertedCurrencyAmountRoyality.toFixed(2)}{" "}
-                {/* {order.currency === "INR" && (
-                  <>
-                    ({order.calculatedRoyaltyAmount.toFixed(2)} {order.currency}
-                    )
-                  </>
-                )} */}
+                {currencyLoading
+                  ? "Loading..."
+                  : `${shopCurrency} ${order.convertedCurrencyAmountRoyality.toFixed(2)}`}
               </Text>
-            </InlineStack>
-
-            {/* {/*
-             converted currency */}
-            {/* <InlineStack align="space-between">
-              <Text as="span" tone="subdued">
-                Total Royalty Amount (USD)
-              </Text>
-              <Text as="span" fontWeight="bold" variant="headingMd">
-                ${order.convertedCurrencyAmountRoyality.toFixed(2)}
-              </Text>
-            </InlineStack> */}
+            </div>
           </BlockStack>
         </Card>
 
@@ -226,26 +124,10 @@ const OrderModal: React.FC<OrderModalProps> = ({
             <Divider />
 
             {order.lineItem && order.lineItem.length > 0 ? (
-              <BlockStack gap="300">
+              <BlockStack gap="400">
                 {Object.values(
                   order.lineItem.reduce(
-                    (
-                      acc: Record<
-                        string,
-                        {
-                          productId: string;
-                          title: string;
-                          variants: {
-                            variantTitle: string;
-                            quantity: number;
-                            unitPrice: number;
-                            royality: number;
-                            royaltyPercentage: number;
-                          }[];
-                        }
-                      >,
-                      item,
-                    ) => {
+                    (acc: Record<string, LineItemProduct>, item) => {
                       if (!acc[item.productId]) {
                         acc[item.productId] = {
                           productId: item.productId,
@@ -266,60 +148,92 @@ const OrderModal: React.FC<OrderModalProps> = ({
                     },
                     {},
                   ),
-                ).map((product) => (
-                  <Card key={product.productId}>
-                    <BlockStack gap="200">
-                      <Text as="h3" variant="headingMd" fontWeight="semibold">
-                        {product.title || "Unknown Product"}
-                      </Text>
+                ).map((product) => {
+                  const relatedTx = transactions.find(
+                    (tx) => tx.productId === product.productId,
+                  );
+                  const status = relatedTx?.status || null;
 
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 80px 140px 100px",
-                          gap: "16px",
-                          alignItems: "center",
-                        }}
-                      >
-                        {/* Header */}
-                        <Text as="span" tone="subdued" fontWeight="semibold">
-                          Variant
-                        </Text>
-                        <Text as="span" tone="subdued" fontWeight="semibold">
-                          Qty
-                        </Text>
-                        <Text as="span" tone="subdued" fontWeight="semibold">
-                          Unit Price
-                        </Text>
-                        <Text as="span" tone="subdued" fontWeight="semibold">
-                          Royalty %
+                  return (
+                    <Card key={product.productId} padding="400">
+                      <BlockStack gap="400">
+                        <Text as="h3" variant="headingMd" fontWeight="semibold">
+                          {product.title || "Unknown Product"}
                         </Text>
 
-                        {/* Data rows */}
-                        {product.variants.map((v, i) => (
-                          <React.Fragment key={i}>
-                            <Text as="span" fontWeight="medium">
-                              {v.variantTitle}
-                            </Text>
-                            <Text as="span">{v.quantity}</Text>
-                            <Text as="span">
-                              {rates[`${order.currency}-USD`]
-                                ? (
-                                    v.unitPrice * rates[`${order.currency}-USD`]
-                                  ).toFixed(2) + " USD"
-                                : "—"}
-                            </Text>
-                            <Badge tone="info">
-                              {typeof v.royaltyPercentage === "number"
-                                ? v.royaltyPercentage.toFixed(2) + "%"
-                                : "-"}
-                            </Badge>
-                          </React.Fragment>
-                        ))}
-                      </div>
-                    </BlockStack>
-                  </Card>
-                ))}
+                        {/* Variants */}
+                        <BlockStack gap="300">
+                          {product.variants.map((v, i) => (
+                            <React.Fragment key={i}>
+                              <div
+                                style={{
+                                  display: "grid",
+                                  gridTemplateColumns: "200px 1fr",
+                                  rowGap: "12px",
+                                  columnGap: "24px",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <Text
+                                  as="span"
+                                  tone="subdued"
+                                  fontWeight="semibold"
+                                >
+                                  Variant:
+                                </Text>
+                                <Text as="span" fontWeight="medium">
+                                  {v.variantTitle}
+                                </Text>
+
+                                <Text
+                                  as="span"
+                                  tone="subdued"
+                                  fontWeight="semibold"
+                                >
+                                  Quantity:
+                                </Text>
+                                <Text as="span">{v.quantity}</Text>
+
+                                <Text
+                                  as="span"
+                                  tone="subdued"
+                                  fontWeight="semibold"
+                                >
+                                  Unit Price:
+                                </Text>
+                                <Text as="span">
+                                  {currencyLoading
+                                    ? "Loading..."
+                                    : `${shopCurrency} ${(v.unitPrice * (rates[`${order.currency}-USD`] || 1)).toFixed(2)}`}
+                                </Text>
+
+                                <Text
+                                  as="span"
+                                  tone="subdued"
+                                  fontWeight="semibold"
+                                >
+                                  Royalty %:
+                                </Text>
+                                <Text as="span">
+                                  {typeof v.royaltyPercentage === "number"
+                                    ? v.royaltyPercentage.toFixed(2) + "%"
+                                    : "-"}
+                                </Text>
+                              </div>
+
+                              {/* Divider between variants */}
+                              {i < product.variants.length - 1 && (
+                                <Box paddingBlockStart="200">
+                                  <Divider />
+                                </Box>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </BlockStack>
+                      </BlockStack>
+                    </Card>
+                  );
+                })}
               </BlockStack>
             ) : (
               <Text as="p" tone="subdued">
@@ -330,59 +244,91 @@ const OrderModal: React.FC<OrderModalProps> = ({
         </Card>
 
         {/* Transactions */}
+        {/* Transactions */}
         <Card>
           <BlockStack gap="400">
             <Text as="h2" variant="headingLg">
-              Transactions ({order.transactions?.length || 0})
+              Transactions ({transactions.length})
             </Text>
             <Divider />
 
             {transactions.length > 0 ? (
               <BlockStack gap="300">
-                {transactions.map((tx, idx) => (
-                  <Box key={tx.id} padding="300">
-                    <BlockStack gap="200">
-                      <InlineStack align="space-between" blockAlign="center">
+                {transactions.map((tx) => (
+                  <Card key={tx.id} padding="400">
+                    <BlockStack gap="300">
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "200px 1fr",
+                          rowGap: "12px",
+                          columnGap: "24px",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text as="span" tone="subdued" fontWeight="semibold">
+                          Charge ID:
+                        </Text>
                         <Text as="span" fontWeight="medium">
-                          Charge ID: {tx.shopifyTransactionChargeId}
+                          {tx.shopifyTransactionChargeId}
                         </Text>
 
-                        {/* <Badge tone="success">{tx.price.storeCurrency}</Badge> */}
-                      </InlineStack>
-
-                      <InlineStack gap="400" blockAlign="center">
-                        <Text as="span" tone="subdued">
-                          Royalty %
+                        <Text as="span" tone="subdued" fontWeight="semibold">
+                          Royalty %:
                         </Text>
-                        <Badge tone="info">
+                        <Text as="span">
                           {typeof tx.royaltyPercentage === "number"
                             ? tx.royaltyPercentage.toFixed(2) + "%"
                             : "-"}
-                        </Badge>
-                      </InlineStack>
+                        </Text>
 
-                      <InlineStack gap="400" blockAlign="center">
-                        <Text as="span" tone="subdued">
-                          Royalty Price
+                        <Text as="span" tone="subdued" fontWeight="semibold">
+                          Royalty Price:
                         </Text>
                         <Text as="span" fontWeight="bold" variant="headingMd">
-                          {tx.currency} {tx.price.usd.toFixed(2)}{" "}
-                          {/* {tx.price.storeCurrency === "INR" && (
-                            <>
-                              ({tx.price.storeprice.toFixed(2)}{" "}
-                              {tx.price.storeCurrency})
-                            </>
-                          )} */}
+                          {currencyLoading
+                            ? "Loading..."
+                            : `${shopCurrency} ${tx.price.usd.toFixed(2)}`}
                         </Text>
-                      </InlineStack>
 
-                      {tx.description && (
-                        <Text as="span" tone="subdued">
-                          {tx.description}
+                        {tx.description && (
+                          <>
+                            <Text
+                              as="span"
+                              tone="subdued"
+                              fontWeight="semibold"
+                            >
+                              Description:
+                            </Text>
+                            <Text as="span" tone="subdued">
+                              {tx.description}
+                            </Text>
+                          </>
+                        )}
+
+                        {/* Status */}
+                        <Text as="span" tone="subdued" fontWeight="semibold">
+                          Status:{" "}
                         </Text>
-                      )}
+
+                        <Text
+                          as="span"
+                          variant="headingMd"
+                          tone={
+                            tx.status === "success"
+                              ? "success"
+                              : tx.status === "pending"
+                                ? "critical"
+                                : "critical"
+                          }
+                          fontWeight="bold"
+                        >
+                          {tx.status.charAt(0).toUpperCase() +
+                            tx.status.slice(1)}
+                        </Text>
+                      </div>
                     </BlockStack>
-                  </Box>
+                  </Card>
                 ))}
               </BlockStack>
             ) : (

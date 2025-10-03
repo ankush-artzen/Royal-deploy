@@ -1,12 +1,16 @@
 import { configureStore } from "@reduxjs/toolkit";
 import currencyReducer from "./currencySlice";
 import billingReducer from "./billingSlice";
+import billingStatusReducer from "./billingStatusSlice";
+
 
 
 export const store = configureStore({
   reducer: {
     currency: currencyReducer,
     billing: billingReducer,
+    billingStatus: billingStatusReducer,
+
 
   },
 });

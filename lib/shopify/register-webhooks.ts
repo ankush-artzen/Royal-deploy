@@ -2,6 +2,7 @@ import { DeliveryMethod, Session } from "@shopify/shopify-api";
 import { setupGDPRWebHooks } from "./gdpr";
 import shopify from "./initialize-context";
 import { AppInstallations } from "../db/app-installations";
+import { cancelShopSubscription } from "@/lib/helper/cancelShopSubscription";
 
 let webhooksInitialized = false;
 
@@ -16,6 +17,11 @@ export function addHandlers() {
         callback: async (_topic, shop, _body) => {
           console.log("Uninstalled app from shop:", shop);
           await AppInstallations.delete(shop);
+
+          // Cancel subscription
+          await cancelShopSubscription(shop);
+
+          console.log("✅ Subscription + session cleanup done for:", shop);
         },
       },
 

@@ -7,6 +7,11 @@ import { useRouter } from "next/navigation";
 import CustomDataTable from "@/app/components/CustomDataTable";
 import OrderModal from "@/app/components/RoyaltyOrderModal";
 import Pagination from "@/app/components/Pagination";
+import { useShopCurrency } from "@/app/hooks/shopCurrency";
+import SummaryCards from "@/app/components/SummaryCards";
+import { CashDollarIcon, OrderIcon, InfoIcon } from "@shopify/polaris-icons";
+import moment from "moment";
+import { useBillingStatus } from "@/app/hooks/useBillingStatus";
 
 export default function RoyaltiesPage() {
   const [orders, setOrders] = useState<RoyaltyOrder[]>([]);
@@ -22,9 +27,18 @@ export default function RoyaltiesPage() {
   const [modalActive, setModalActive] = useState<boolean>(false);
   const [modalLoading, setModalLoading] = useState<boolean>(false);
 
+  const { currency: shopCurrency, loading: currencyLoading } =
+    useShopCurrency(shop);
+
   const app = useAppBridge();
   const router = useRouter();
-
+  const { approved: billingApproved, loading: billingLoading } =
+    useBillingStatus();
+  useEffect(() => {
+    if (!billingLoading && billingApproved === false) {
+      router.replace("/royalty/billing"); //send to billing
+    }
+  }, [billingLoading, billingApproved, router]);
   // Detect shop
   useEffect(() => {
     const shopFromConfig = (app as any)?.config?.shop;
@@ -90,74 +104,95 @@ export default function RoyaltiesPage() {
   };
 
   // Build rows for table
-  // Build rows for table
   const rows: (string | JSX.Element)[][] =
     orders.length > 0
       ? [
-          ...orders.map((order) => {
-            console.log("Mapping order:", order);
-            return [
-              <a
-                key={`name-${order.orderId}`}
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  console.log("Clicked orderId:", order.orderId);
-                  openOrderModal(order);
-                }}
-                style={{
-                  color: "blue",
-                  textDecoration: "underline",
-                  cursor: "pointer",
-                }}
-              >
-                {order.orderName}
-              </a>,
-              <InlineStack key={`id-${order.orderId}`}>
-                <div style={{ textAlign: "start", minWidth: "80px" }}>
-                  {order.orderId}
-                </div>
-              </InlineStack>,
+          ...orders.map((order) => [
+            <a
+              key={`name-${order.orderId}`}
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openOrderModal(order);
+              }}
+              style={{
+                color: "blue",
+                textDecoration: "underline",
+                cursor: "pointer",
+              }}
+            >
+              {order.orderName}
+            </a>,
+            <InlineStack key={`id-${order.orderId}`}>
+              <div style={{ textAlign: "start", minWidth: "80px" }}>
+                {order.orderId}
+              </div>
+            </InlineStack>,
+            <span key={`royalty-${order.orderId}`}>
+              {currencyLoading ? (
+                "Loading..."
+              ) : (
+                <strong>
+                  {shopCurrency}{" "}
+                  {order.convertedCurrencyAmountRoyality.toFixed(2)}
+                </strong>
+              )}
+            </span>,
 
-              <span key={`royalty1-${order.orderId}`}>
-                {order.convertedCurrencyAmountRoyality.toFixed(2)} USD{" "}
-                {/* {order.currency === "INR" && (
-                  <>
-                    ({order.calculatedRoyaltyAmount.toFixed(2)} {order.currency}
-                    )
-                  </>
-                )} */}
-              </span>,
-              // <span key={`royalty2-${order.orderId}`}>
-              //   {order.convertedCurrencyAmountRoyality.toFixed(2)} USD
-              // </span>,
-              <span key={`date-${order.orderId}`}>
-                {order.createdAt
-                  ? new Date(order.createdAt).toLocaleDateString()
-                  : "-"}
-              </span>,
-            ];
-          }),
-          // TOTAL row
-          [
-            <strong key="total-label">TOTAL</strong>,
-            "",
-            <strong key="total-royalty">
-              {totalConvertedRoyalty.toFixed(2)} USD
-              {/* {totalCurrency === "INR" && `(${totalRoyalty.toFixed(2)} INR)`} */}
-            </strong>,
-            "", // empty for "Created At"
-          ],
-
-          // `${totalConvertedRoyalty.toFixed(2)} USD`,
+            <span key={`date-${order.orderId}`}>
+              {order.createdAt ? moment(order.createdAt).format("ll") : "-"}
+            </span>,
+          ]),
         ]
-      : [];
+      : // TOTAL row
+        // [
+        //   <strong key="total-label">TOTAL</strong>,
+        //   "",
+        //   <strong key="total-royalty">
+        //     {currencyLoading
+        //       ? "Loading..."
+        //       : `${shopCurrency} ${totalConvertedRoyalty.toFixed(2)}`}
+        //   </strong>,
+        //   "",
+        // ],
+        [];
 
   return (
     <Page
       title="Royalties Per Order"
       backAction={{ content: "Back", onAction: () => router.back() }}
+      fullWidth
     >
+      {/* ✅ Summary Cards */}
+      <SummaryCards
+        items={[
+          {
+            title: "Total Orders",
+            value: totalOrders.toLocaleString(),
+            icon: OrderIcon,
+            loading,
+          },
+          {
+            title: "Total Royality Amount ",
+            value: currencyLoading
+              ? "Loading..."
+              : `${shopCurrency} ${totalConvertedRoyalty.toFixed(2)}`,
+            icon: CashDollarIcon,
+            tone: "success",
+            loading,
+          },
+          {
+            title: "Highest Royalty(Per Page)",
+            value: orders.length
+              ? `${shopCurrency} ${Math.max(...orders.map((o) => o.convertedCurrencyAmountRoyality)).toFixed(2)}`
+              : "-",
+            icon: InfoIcon,
+            tone: "base",
+            loading,
+          },
+        ]}
+      />
+
       <CustomDataTable
         columns={["Order Name", "Order ID", "Royalty Amount", "Created At"]}
         rows={rows}

@@ -9,6 +9,7 @@ import { store } from "@/app/redux/store";
 
 import { TanstackProvider } from "./tanstack-provider";
 import Link from "next/link";
+import Navbar from "./navbar";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -17,14 +18,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <TanstackProvider>
           <SessionProvider>{children}</SessionProvider>
 
-          <ui-nav-menu>
-          <Link href="/royalty/orders/analytics">Analytics</Link>
-            <Link href="/royalty">Products</Link>
-            <Link href="/royalty/orders">Orders </Link>
-            <Link href="/royalty/orders/transaction">Transactions</Link>
-            <Link href="/royalty/billing/start">Billing</Link>
-
-          </ui-nav-menu>
+          <Navbar/>
         </TanstackProvider>
       </ReduxProvider>
     </AppProvider>

@@ -3,7 +3,7 @@
 client_id = "6ac50fbc61ef6c598b1519b6879336c7"
 name = "Royal-app-local"
 handle = "royal-app-local"
-application_url = "https://zulma-palatial-violette.ngrok-free.dev"
+application_url = "https://suspended-eur-employment-phase.trycloudflare.com"
 embedded = true
 
 [build]
@@ -16,9 +16,9 @@ scopes = "read_checkouts,read_customers,read_orders,read_products,write_checkout
 
 [auth]
 redirect_urls = [
-  "https://zulma-palatial-violette.ngrok-free.dev/auth/callback",
-  "https://zulma-palatial-violette.ngrok-free.dev/auth/shopify/callback",
-  "https://zulma-palatial-violette.ngrok-free.dev/api/auth/callback"
+  "https://suspended-eur-employment-phase.trycloudflare.com/auth/callback",
+  "https://suspended-eur-employment-phase.trycloudflare.com/auth/shopify/callback",
+  "https://suspended-eur-employment-phase.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

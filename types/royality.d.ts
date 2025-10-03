@@ -31,6 +31,8 @@ interface Transaction {
   designerId: string;
   createdAt: string;
   updatedAt: string;
+  status: "pending" | "success" | "failed";
+
 }
 
 interface RoyaltyOrder {

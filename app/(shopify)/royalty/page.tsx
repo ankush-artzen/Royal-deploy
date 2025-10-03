@@ -25,6 +25,7 @@ import DeleteConfirmationModal from "../../components/dialog";
 import Pagination from "../../components/Pagination";
 import CustomDataTable from "../../components/CustomDataTable";
 import { defaultImage } from "@/lib/config/royaltyConfig";
+import moment from "moment";
 
 export default function RoyaltiesPage() {
   const app = useAppBridge();
@@ -177,27 +178,38 @@ export default function RoyaltiesPage() {
         </div>
       </InlineStack>,
 
-      <Badge key={`royalty-${royalty.id}`} tone="success">
+      <Text as="h2" key={`royalty-${royalty.id}`}>
         {`${royalty.Royality ?? 0}%`}
-      </Badge>,
-      <Text key={`price-${royalty.id}`} as="h2" alignment="start">
+      </Text>,
+      <Text
+        key={`price-${royalty.id}`}
+        as="h2"
+        alignment="start"
+        fontWeight="bold"
+      >
         {royalty.price
-          ? `${royalty.price.amount.toFixed(2)} ${royalty.price.currency}`
+          ? `${royalty.price.currency} ${royalty.price.amount.toFixed(2)} `
           : "—"}
       </Text>,
 
-      <Text
-        key={`expiry-${royalty.id}`}
-        as="h2"
-        fontWeight="bold"
-        tone={isExpired ? "critical" : "success"}
-      >
-        {expiryDate
-          ? `${expiryDate.toLocaleDateString()} ${expiryDate.toLocaleTimeString()}`
-          : "—"}
-        {isExpired && <br />}
-        {isExpired && "(Expired)"}
+      <Text key={`expiry-${royalty.id}`} as="h2" fontWeight="bold">
+        {/* Expiry date always in success */}
+
+        <Text as="span" tone="success">
+          {expiryDate ? moment(expiryDate).format("lll") : "—"}
+        </Text>
+
+        {/* If expired, show (Expired) in red */}
+        {isExpired && (
+          <>
+            <br />
+            <Text as="span" tone="critical">
+              (Expired)
+            </Text>
+          </>
+        )}
       </Text>,
+
       <InlineStack key={`actions-${royalty.id}`} blockAlign="center" gap="400">
         <Tooltip content="Edit Royalty">
           <Button
@@ -239,6 +251,7 @@ export default function RoyaltiesPage() {
       <Page
         title="Product Royalties"
         subtitle="Assign royalties to your Products"
+        fullWidth
         backAction={{ content: "Back", onAction: () => router.back() }}
         primaryAction={{
           content: "Create Royalty Products",
@@ -261,7 +274,7 @@ export default function RoyaltiesPage() {
 
         {activeEdit && (
           <EditRoyaltyModal
-            open={true} // always boolean
+            open={true}
             royalty={activeEdit}
             onClose={() => setActiveEdit(null)}
             onUpdate={handleUpdate}

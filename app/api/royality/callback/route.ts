@@ -28,11 +28,11 @@ export async function GET(req: NextRequest) {
 
     console.log("🔎 Extracted:", { shop, chargeId, hostParam });
 
-    // Always try to fetch token
+    // Fetch session token
     const sessions = shop ? await findSessionsByShop(shop) : [];
     const token = sessions?.[0]?.accessToken;
 
-    // Always try to fetch charge
+    // Fetch charge from Shopify
     let rac: any = null;
     if (shop && chargeId && token) {
       const chargeUrl = `https://${shop}/admin/api/${API_VERSION}/recurring_application_charges/${chargeId}.json`;
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       const data = await resp.json();
       rac = data?.recurring_application_charge || null;
 
-      // Try activation if still pending
+      // Activate if pending
       if (rac?.status === "pending") {
         const activateUrl = `https://${shop}/admin/api/${API_VERSION}/recurring_application_charges/${chargeId}/activate.json`;
         const activateRes = await fetch(activateUrl, {
@@ -56,16 +56,14 @@ export async function GET(req: NextRequest) {
         rac = activateData?.recurring_application_charge || rac;
       }
 
-      // Save to DB even if not active yet
+      // Save to DB
       if (rac) {
         await prisma.royaltySubscription.upsert({
           where: { shop },
           update: {
             chargeId: rac.id?.toString(),
             planName: rac.name,
-            cappedAmount: rac.capped_amount
-              ? parseFloat(rac.capped_amount)
-              : null,
+            cappedAmount: rac.capped_amount ? parseFloat(rac.capped_amount) : null,
             currency: rac.currency,
             status: rac.status,
             test: rac.test,
@@ -74,9 +72,7 @@ export async function GET(req: NextRequest) {
             shop,
             chargeId: rac.id?.toString(),
             planName: rac.name,
-            cappedAmount: rac.capped_amount
-              ? parseFloat(rac.capped_amount)
-              : null,
+            cappedAmount: rac.capped_amount ? parseFloat(rac.capped_amount) : null,
             currency: rac.currency,
             status: rac.status,
             test: rac.test,
@@ -85,22 +81,33 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Fallback host generation
+    // Generate fallback host
     if (!hostParam && shop) {
-      hostParam = Buffer.from(`${shop}/admin`, "utf8")
-        .toString("base64")
-        .replace(/=/g, "");
+      hostParam = Buffer.from(`${shop}/admin`, "utf8").toString("base64").replace(/=/g, "");
     }
 
-    // Always redirect back
+    // ✅ Create redirect response
     const redirectUrl = shop && hostParam
-      ? `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}/royalty/billing/start?host=${hostParam}`
+      ? `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}/royalty/billing?host=${hostParam}`
       : `${process.env.HOST}/app?billing=done`;
 
+    const response = NextResponse.redirect(redirectUrl);
+
+    // ✅ Set billingActive cookie so middleware can read it
+    response.cookies.set({
+      name: "billingActive",
+      value: "true",
+      path: "/",             // Must be root to be visible to middleware
+      httpOnly: true,        // Only server can read
+      sameSite: "lax",       // Shopify iframe-safe
+      secure: process.env.NODE_ENV === "production",
+    });
+
     console.log("🚀 Redirecting to:", redirectUrl);
+    console.log("✅ billingActive cookie set");
     console.log("===== 🟢 Billing Callback Handler END =====");
 
-    return NextResponse.redirect(redirectUrl);
+    return response;
   } catch (error: any) {
     console.error("❌ Callback error:", error?.message || error);
     console.log("===== 🔴 Billing Callback Handler CRASH =====");
