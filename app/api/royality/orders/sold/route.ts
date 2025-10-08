@@ -21,7 +21,6 @@ interface LineItemStat {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-
     const shop = searchParams.get("shop");
     const query = searchParams.get("query")?.trim().toLowerCase() || "";
     const sortKey = (searchParams.get("sortKey") as keyof LineItemStat) || "totalRoyalty";
@@ -36,25 +35,52 @@ export async function GET(req: NextRequest) {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Step 1: Aggregate using MongoDB pipeline
-    const pipeline: any[] = [
-      { $match: { shop } },
-      { $unwind: "$lineItem" },
-    ];
+    // Build common match stages
+    const baseMatch: any[] = [{ $match: { shop } }];
 
     if (query) {
-      pipeline.push({
-        $match: {
-          $or: [
-            { "lineItem.title": { $regex: query, $options: "i" } },
-            { "lineItem.productId": { $regex: query, $options: "i" } },
-            { "lineItem.variantTitle": { $regex: query, $options: "i" } },
-          ],
-        },
-      });
+      baseMatch.push(
+        { $unwind: "$lineItem" },
+        {
+          $match: {
+            $or: [
+              { "lineItem.title": { $regex: query, $options: "i" } },
+              { "lineItem.productId": { $regex: query, $options: "i" } },
+              { "lineItem.variantTitle": { $regex: query, $options: "i" } },
+            ],
+          },
+        }
+      );
+    } else {
+      baseMatch.push({ $unwind: "$lineItem" });
     }
 
-    pipeline.push(
+    // ------------------------
+    // Step 1: Count total products (filtered)
+    // ------------------------
+    const totalCountPipeline: any[] = [
+      ...baseMatch,
+      {
+        $group: {
+          _id: { productId: "$lineItem.productId", variantId: "$lineItem.variantId" },
+        },
+      },
+      { $count: "total" },
+    ];
+
+    const totalResult: any = await prisma.$runCommandRaw({
+      aggregate: "RoyaltyOrder",
+      pipeline: totalCountPipeline,
+      cursor: {},
+    });
+
+    const totalProducts = totalResult.cursor?.firstBatch?.[0]?.total ?? 0;
+
+    // ------------------------
+    // Step 2: Aggregate with pagination (same filter)
+    // ------------------------
+    const pipeline: any[] = [
+      ...baseMatch,
       {
         $group: {
           _id: { productId: "$lineItem.productId", variantId: "$lineItem.variantId" },
@@ -68,13 +94,20 @@ export async function GET(req: NextRequest) {
           royaltyPercentage: { $avg: "$lineItem.royaltyPercentage" },
           last30DaysRoyalty: {
             $sum: {
-              $cond: [{ $gte: ["$createdAt", thirtyDaysAgo] }, "$lineItem.productRoyaltyAmount", 0],
+              $cond: [
+                { $gte: ["$createdAt", thirtyDaysAgo] },
+                "$lineItem.productRoyaltyAmount",
+                0,
+              ],
             },
           },
           currency: { $first: "$currency" },
         },
-      }
-    );
+      },
+      { $sort: { [sortKey]: sortDir === "asc" ? 1 : -1 } },
+      { $skip: (page - 1) * pageSize },
+      { $limit: pageSize },
+    ];
 
     const rawProducts: LineItemStat[] = await prisma.$runCommandRaw({
       aggregate: "RoyaltyOrder",
@@ -82,7 +115,9 @@ export async function GET(req: NextRequest) {
       cursor: {},
     }).then((res: any) => res.cursor.firstBatch);
 
-    // Step 2: Enrich with productRoyalty (price & image)
+    // ------------------------
+    // Step 3: Enrich with image & price
+    // ------------------------
     const productIds = rawProducts.map((p) => p.productId);
     const dbProducts = await prisma.productRoyalty.findMany({
       where: { shop, productId: { in: productIds } },
@@ -90,7 +125,7 @@ export async function GET(req: NextRequest) {
     });
     const dbProductMap = new Map(dbProducts.map((p) => [p.productId, p]));
 
-    let products = rawProducts.map((p) => {
+    const products = rawProducts.map((p) => {
       const dbProduct = dbProductMap.get(p.productId);
       let price: number | null = null;
       if (dbProduct?.price !== undefined && dbProduct?.price !== null) {
@@ -100,40 +135,16 @@ export async function GET(req: NextRequest) {
       return { ...p, image: dbProduct?.image || null, price };
     });
 
-    // Step 3: Sorting
-    products.sort((a, b) => {
-      const dir = sortDir === "asc" ? 1 : -1;
-      const aValue = a[sortKey] ?? 0;
-      const bValue = b[sortKey] ?? 0;
-      if (typeof aValue === "number" && typeof bValue === "number") return (aValue - bValue) * dir;
-      return String(aValue).localeCompare(String(bValue)) * dir;
-    });
-
-    // Step 4: Pagination
-    const totalProducts = products.length;
     const totalPages = Math.max(1, Math.ceil(totalProducts / pageSize));
-    const currentPage = Math.min(page, totalPages);
-    const startIndex = (currentPage - 1) * pageSize;
-    const paginatedProducts = products.slice(startIndex, startIndex + pageSize);
-
-    // Step 5: Totals
-    const totalUnitSold = products.reduce((sum, p) => sum + p.unitSold, 0);
-    const totalSales = products.reduce((sum, p) => sum + p.totalSale, 0);
-    const totalRoyalties = products.reduce((sum, p) => sum + p.totalRoyalty, 0);
-    const last30DaysTotalRoyalty = products.reduce((sum, p) => sum + p.last30DaysRoyalty, 0);
 
     return NextResponse.json({
       shop,
-      products: paginatedProducts,
+      products,
       totalProducts,
-      totalUnitSold,
-      totalSales,
-      totalRoyalties,
-      last30DaysTotalRoyalty,
-      currentPage,
+      currentPage: page,
       totalPages,
-      hasNextPage: currentPage < totalPages,
-      hasPrevPage: currentPage > 1,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
     });
   } catch (error) {
     console.error("Error fetching product royalty stats:", error);

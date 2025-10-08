@@ -178,13 +178,13 @@ export default function RoyaltiesPage() {
         </div>
       </InlineStack>,
 
-      <Text as="h2" key={`royalty-${royalty.id}`}>
+      <Text as="h2" fontWeight="medium" alignment="center" key={`royalty-${royalty.id}`}>
         {`${royalty.Royality ?? 0}%`}
       </Text>,
       <Text
         key={`price-${royalty.id}`}
         as="h2"
-        alignment="start"
+        alignment="center"
         fontWeight="bold"
       >
         {royalty.price
@@ -210,7 +210,7 @@ export default function RoyaltiesPage() {
         )}
       </Text>,
 
-      <InlineStack key={`actions-${royalty.id}`} blockAlign="center" gap="400">
+      <InlineStack key={`actions-${royalty.id}`} align="center" gap="400">
         <Tooltip content="Edit Royalty">
           <Button
             size="slim"

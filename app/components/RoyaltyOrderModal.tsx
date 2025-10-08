@@ -10,6 +10,7 @@ import {
   Badge,
   Divider,
   Box,
+  Banner,
 } from "@shopify/polaris";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/app/redux/store";
@@ -76,9 +77,8 @@ const OrderModal: React.FC<OrderModalProps> = ({
         {/* Order Summary */}
         <Card>
           <BlockStack gap="400">
-            <Text as="h2" variant="headingLg">
-              Order Summary
-            </Text>
+            <Banner title="Order Summary Info" tone="info" />
+
             <Divider />
             <div
               style={{
@@ -118,9 +118,8 @@ const OrderModal: React.FC<OrderModalProps> = ({
         {/* Products */}
         <Card>
           <BlockStack gap="400">
-            <Text as="h2" variant="headingLg">
-              Products ({order.lineItem?.length || 0})
-            </Text>
+            <Banner title="Products Info" tone="info" />
+
             <Divider />
 
             {order.lineItem && order.lineItem.length > 0 ? (
@@ -244,12 +243,14 @@ const OrderModal: React.FC<OrderModalProps> = ({
         </Card>
 
         {/* Transactions */}
-        {/* Transactions */}
         <Card>
           <BlockStack gap="400">
-            <Text as="h2" variant="headingLg">
-              Transactions ({transactions.length})
-            </Text>
+            {/* Banner with dynamic transaction count */}
+            <Banner
+              title={`Transactions (${transactions.length})`}
+              tone="info"
+            />
+
             <Divider />
 
             {transactions.length > 0 ? (
@@ -306,11 +307,9 @@ const OrderModal: React.FC<OrderModalProps> = ({
                           </>
                         )}
 
-                        {/* Status */}
                         <Text as="span" tone="subdued" fontWeight="semibold">
-                          Status:{" "}
+                          Status:
                         </Text>
-
                         <Text
                           as="span"
                           variant="headingMd"

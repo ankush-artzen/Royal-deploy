@@ -123,10 +123,8 @@ export default function RoyaltiesPage() {
             >
               {order.orderName}
             </a>,
-            <InlineStack key={`id-${order.orderId}`}>
-              <div style={{ textAlign: "start", minWidth: "80px" }}>
-                {order.orderId}
-              </div>
+            <InlineStack key={`id-${order.orderId}`} align="center" >
+              {order.orderId}
             </InlineStack>,
             <span key={`royalty-${order.orderId}`}>
               {currencyLoading ? (

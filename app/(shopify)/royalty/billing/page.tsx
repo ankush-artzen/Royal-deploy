@@ -15,8 +15,6 @@ import ErrorBanner from "@/app/components/billing/ErrorBanner";
 import { useBillingData } from "@/app/hooks/useBillingData";
 import { useCurrencyConversion } from "@/app/hooks/useCurrencyConversion";
 
-
-
 export default function HomePage() {
   const router = useRouter();
   const app = useAppBridge();
@@ -88,19 +86,20 @@ export default function HomePage() {
           </Layout.Section>
 
           {/* Transactions Section */}
-          <Layout.Section>
-            <BalanceCards
-              loadingTx={loadingTx}
-              latestTransaction={latestTransaction}
-              shopCurrency={shopCurrency}
-              balanceUsedINR={balanceUsedINR}
-              balanceRemainingINR={balanceRemainingINR}
-              cappedAmount={cappedAmount}
-              cappedCurrency={cappedCurrency}
-              cappedAmountINR={cappedAmountINR}
-            />
-          </Layout.Section>
-
+          {billingApproved && (
+            <Layout.Section>
+              <BalanceCards
+                loadingTx={loadingTx}
+                latestTransaction={latestTransaction}
+                shopCurrency={shopCurrency}
+                balanceUsedINR={balanceUsedINR}
+                balanceRemainingINR={balanceRemainingINR}
+                cappedAmount={cappedAmount}
+                cappedCurrency={cappedCurrency}
+                cappedAmountINR={cappedAmountINR}
+              />
+            </Layout.Section>
+          )}
           {/* Current Status */}
           <Layout.Section>
             <StatusCard

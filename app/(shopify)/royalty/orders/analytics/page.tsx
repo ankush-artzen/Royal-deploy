@@ -12,6 +12,7 @@ import {
   Button,
   Tooltip,
   Icon,
+  Box,
   Badge,
 } from "@shopify/polaris";
 import { useAppBridge } from "@shopify/app-bridge-react";
@@ -170,7 +171,10 @@ export default function ProductRoyaltyFromOrdersPage() {
             tone="success"
             fontWeight="semibold"
           >
-            {product.unitSold.toLocaleString()}
+            {"    "}
+            <Text alignment="center" as="span">
+              {product.unitSold.toLocaleString()}
+            </Text>
           </Text>,
 
           <Text
@@ -241,7 +245,13 @@ export default function ProductRoyaltyFromOrdersPage() {
       }
       backAction={{ content: "Back", onAction: () => router.back() }}
     >
-      <Card>
+      <Card background="bg-fill">
+        <style jsx global>{`
+          .Polaris-Filters__Container {
+            border-bottom: none !important;
+          }
+        `}</style>
+
         <Filters
           queryValue={queryValue}
           filters={[]}
@@ -250,15 +260,14 @@ export default function ProductRoyaltyFromOrdersPage() {
           onClearAll={handleClearAll}
           queryPlaceholder="Search by title, product ID, variant…"
           appliedFilters={appliedFilters}
-        >
-          <InlineStack gap="100" align="center">
-            <Icon source={SearchIcon} tone="subdued" />
-            {/* <Text as="span" variant="bodySm">
+        />
+        {/* <InlineStack gap="100" align="center">
+            <Icon source={SearchIcon} tone="subdued" /> */}
+        {/* <Text as="span" variant="bodySm">
               {apiData?.totalProducts || 0} result
               {apiData?.totalProducts === 1 ? "" : "s"}
             </Text> */}
-          </InlineStack>
-        </Filters>
+        {/* </InlineStack> */}
       </Card>
 
       <CustomDataTable

@@ -198,10 +198,12 @@ export default function RoyaltyOnboarding() {
   return (
     <Page
       backAction={{ content: "Home", onAction: () => router.push("/") }}
+      fullWidth
       title="Royalty Program Setup"
       subtitle="Complete these steps to start managing designer royalties and grow your collaborative business"
     >
       <Layout>
+        
         <Layout.Section>
           <BlockStack gap="400">
             <SubscriptionBanner
@@ -218,7 +220,10 @@ export default function RoyaltyOnboarding() {
             <OnboardingSteps steps={onboardingSteps} />
 
             {/* Help Section */}
+            <div style={{ marginBottom: "10px" }}>
+
             <Card>
+
               <BlockStack gap="200">
                 <Text as="h3" variant="headingMd" fontWeight="semibold">
                   Need Help Getting Started?
@@ -237,6 +242,7 @@ export default function RoyaltyOnboarding() {
                 </InlineStack>
               </BlockStack>
             </Card>
+            </div>
           </BlockStack>
         </Layout.Section>
       </Layout>

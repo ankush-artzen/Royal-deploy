@@ -18,11 +18,19 @@ const BalanceCards = ({
   cappedCurrency,
   cappedAmountINR,
 }: BalanceCardsProps) => {
+  /** === Layout constants === */
+  const CARD_WIDTH = "350px";
+  const CARD_MIN_HEIGHT = "60px";
+  const CARD_PADDING = "100";
+  const STACK_GAP_OUTER = "400";
+  const STACK_GAP_INNER = "1600"; // space between cards
+  const CONTENT_GAP = "200";
+  const LOADING_SPINNER_SIZE: "small" | "large" = "small";
+
   const renderBalanceCard = (
     title: string,
     value: number | null | undefined,
     currency: string | null | undefined,
-    convertedValue: number | null,
     tone: "critical" | "success" | "subdued",
   ) => {
     if (!latestTransaction) {
@@ -33,69 +41,70 @@ const BalanceCards = ({
       );
     }
 
-    if (shopCurrency === "USD") {
-      return (
-        <Text as="h2" variant="headingMd" tone={tone} fontWeight="bold">
-          {value?.toFixed(2)} {currency}
-        </Text>
-      );
-    } else if (shopCurrency === "INR") {
-      return (
-        <>
-          <Text as="h2" variant="headingMd" tone={tone} fontWeight="bold">
-            {convertedValue?.toFixed(2)}
-          </Text>
-          {currency !== "INR" && (
-            <Text as="h2" variant="headingSm" tone="subdued">
-              ({value?.toFixed(2)} {currency})
-            </Text>
-          )}
-        </>
-      );
-    } else {
-      return (
-        <Text as="p" tone="subdued">
-          Currency not available
-        </Text>
-      );
-    }
+    return (
+      <Text as="h2" variant="headingMd" tone={tone} fontWeight="bold">
+        {currency ?? "USD"} {value?.toFixed(2)}
+      </Text>
+    );
   };
 
-  // Consistent card width for both loading and content states
-  const cardWidth = "400px";
+  // Fixed loading card content to match actual card structure
+  const renderLoadingCard = (title: string, description: string) => (
+    <Card background="bg-surface-info">
+      <Box
+        width={CARD_WIDTH}
+        minHeight={CARD_MIN_HEIGHT}
+        padding={CARD_PADDING}
+      >
+        <BlockStack gap={CONTENT_GAP}>
+          <Text as="h3" variant="headingMd" tone="subdued">
+            {title}
+          </Text>
+          <Text as="p" tone="subdued">
+            {description}
+          </Text>
+          <InlineStack align="center" gap={CONTENT_GAP}>
+            <Spinner
+              accessibilityLabel={`Loading ${title}`}
+              size={LOADING_SPINNER_SIZE}
+            />
+            <Text as="p" tone="subdued">
+              Loading...
+            </Text>
+          </InlineStack>
+        </BlockStack>
+      </Box>
+    </Card>
+  );
 
   return (
-    <Card>
-      <BlockStack gap="400">
-        <Banner title="Royalty Amount Status" tone="info" />
+    <Banner title="Royalty Amount Status" tone="info">
+      <InlineStack align="center" gap={STACK_GAP_INNER}>
+        {loadingTx ? (
+          <>
+            {/* Loading state - Balance Used */}
+            {renderLoadingCard(
+              "Balance Used",
+              "Total amount already utilized from your subscription capped amount",
+            )}
 
-        {loadingTx && (
-          <InlineStack align="center" gap="400">
-            {[1, 2].map((i) => (
-              <Card key={i}>
-                <Box width={cardWidth} minHeight="100px" padding="400">
-                  <InlineStack align="center" blockAlign="center" gap="200">
-                    <Spinner
-                      accessibilityLabel={`Loading balance ${i}`}
-                      size="large"
-                    />
-                    <Text as="p" tone="subdued">
-                      Loading...
-                    </Text>
-                  </InlineStack>
-                </Box>
-              </Card>
-            ))}
-          </InlineStack>
-        )}
-
-        {!loadingTx && (
-          <InlineStack align="center" gap="400">
+            {/* Loading state - Capped Amount */}
+            {renderLoadingCard(
+              "Capped Amount",
+              "Maximum allowed capped amount spending limit for your plan",
+            )}
+          </>
+        ) : (
+          <>
             {/* Balance Used */}
             <Card background="bg-surface-info">
-              <Box width={cardWidth} minHeight="100px" padding="400">
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingXl" tone="subdued">
+              <Box
+                width={CARD_WIDTH}
+                minHeight={CARD_MIN_HEIGHT}
+                padding={CARD_PADDING}
+              >
+                <BlockStack gap={CONTENT_GAP}>
+                  <Text as="h3" variant="headingLg" fontWeight="bold">
                     Balance Used
                   </Text>
                   <Text as="p" tone="subdued">
@@ -106,10 +115,9 @@ const BalanceCards = ({
                     "Balance Used",
                     latestTransaction?.balanceUsed,
                     latestTransaction?.currency,
-                    balanceUsedINR,
                     latestTransaction?.balanceUsed &&
                       latestTransaction.balanceUsed > 0
-                      ? "critical"
+                      ? "subdued"
                       : "success",
                   )}
                 </BlockStack>
@@ -118,28 +126,31 @@ const BalanceCards = ({
 
             {/* Capped Amount */}
             <Card background="bg-surface-info">
-              <Box width={cardWidth} minHeight="100px" padding="400">
-                <BlockStack gap="200">
-                  <Text as="h3" variant="headingXl" tone="subdued">
+              <Box
+                width={CARD_WIDTH}
+                minHeight={CARD_MIN_HEIGHT}
+                padding={CARD_PADDING}
+              >
+                <BlockStack gap={CONTENT_GAP}>
+                  <Text as="h3" variant="headingLg" fontWeight="bold">
                     Capped Amount
                   </Text>
                   <Text as="p" tone="subdued">
-                    Maximum allowed Capped amount spending limit for your plan
+                    Maximum allowed capped amount spending limit for your plan
                   </Text>
                   {renderBalanceCard(
                     "Capped Amount",
                     cappedAmount,
                     cappedCurrency,
-                    cappedAmountINR,
                     "subdued",
                   )}
                 </BlockStack>
               </Box>
             </Card>
-          </InlineStack>
+          </>
         )}
-      </BlockStack>
-    </Card>
+      </InlineStack>
+    </Banner>
   );
 };
 

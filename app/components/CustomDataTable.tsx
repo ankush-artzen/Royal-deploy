@@ -19,12 +19,14 @@ const CustomDataTable: FC<CustomDataTableProps> = ({
   loading = false,
   error = null,
   emptyStateMessage = "No records found",
-  emptyStateImage = EMPTY_STATE_IMAGE, // ✅ use config default
+  emptyStateImage = EMPTY_STATE_IMAGE,
 }) => {
   return (
     <Card>
       {loading ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: "32px" }}>
+        <div
+          style={{ display: "flex", justifyContent: "center", padding: "32px" }}
+        >
           <Spinner accessibilityLabel="Loading data" size="large" />
         </div>
       ) : error ? (
@@ -36,6 +38,10 @@ const CustomDataTable: FC<CustomDataTableProps> = ({
       ) : (
         <div className="custom-table-wrapper" style={{ overflowX: "auto" }}>
           <style jsx global>{`
+            .Polaris-Filters__Container {
+              border-bottom: none !important;
+            }
+
             .custom-table-wrapper .Polaris-DataTable__Navigation {
               display: none !important;
             }
@@ -47,11 +53,31 @@ const CustomDataTable: FC<CustomDataTableProps> = ({
           <DataTable
             columnContentTypes={columns.map(() => "text")}
             headings={columns.map((column, index) => (
-              <Text key={index} as="h1" variant="headingMd">
-                {column}
-              </Text>
+              <div
+                key={index}
+                style={{
+                  width: "100%",
+                  textAlign: index === 0 ? "left" : "center",
+                }}
+              >
+                <Text as="h1" variant="headingMd">
+                  {column}
+                </Text>
+              </div>
             ))}
-            rows={rows}
+            rows={rows.map((row) =>
+              row.map((cell, index) => (
+                <div
+                  key={index}
+                  style={{
+                    width: "100%",
+                    textAlign: index === 0 ? "left" : "center",
+                  }}
+                >
+                  {cell}
+                </div>
+              )),
+            )}
             hasZebraStripingOnData
           />
         </div>
