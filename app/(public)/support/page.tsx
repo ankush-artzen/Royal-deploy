@@ -1,10 +1,15 @@
-"use client";
 
-export default function SupportPage() {
+export default async function SupportPage() {
   const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || "Your Company";
   const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Your App";
   const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@example.com";
-  const LAST_UPDATED = process.env.NEXT_PUBLIC_LAST_UPDATED_DATE || "Insert Date";
+  const LAST_UPDATED =
+    process.env.NEXT_PUBLIC_LAST_UPDATED_DATE ||
+    new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
   return (
     <main className="min-h-screen bg-gray-50 py-4 px-3">

@@ -1,10 +1,19 @@
-"use client";
+// ✅ This file is server-rendered (no "use client")
 
-export default function PrivacyPolicyPage() {
+export default async function PrivacyPolicyPage() {
   const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || "Your Company";
   const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Your App";
-  const SUPPORT_EMAIL = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@example.com";
-  const COMPANY_ADDRESS = process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "Your Company Address";
+  const SUPPORT_EMAIL =
+    process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@example.com";
+  const COMPANY_ADDRESS =
+    process.env.NEXT_PUBLIC_COMPANY_ADDRESS || "Your Company Address";
+  const LAST_UPDATED =
+    process.env.NEXT_PUBLIC_LAST_UPDATED_DATE ||
+    new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
   return (
     <main className="min-h-screen bg-gray-50 py-4 px-3">
@@ -12,16 +21,13 @@ export default function PrivacyPolicyPage() {
         <h1 className="text-3xl font-extrabold text-gray-900 mb-2">
           Privacy Policy
         </h1>
-        <p className="text-xs text-gray-500 mb-4">
-          Last Updated: [Insert Date]
-        </p>
+        <p className="text-xs text-gray-500 mb-4">Last Updated: {LAST_UPDATED}</p>
 
         <section className="space-y-4 text-sm text-gray-700 leading-relaxed">
           <p>
-            This Privacy Policy describes how{" "}
-            <strong>{COMPANY_NAME}</strong> collects, uses, and shares
-            your personal information when you use our Shopify app,{" "}
-            <strong>{APP_NAME}</strong>.
+            This Privacy Policy describes how <strong>{COMPANY_NAME}</strong>{" "}
+            collects, uses, and shares your personal information when you use
+            our Shopify app, <strong>{APP_NAME}</strong>.
           </p>
 
           {/* --- 1. Information We Collect --- */}
@@ -75,7 +81,10 @@ export default function PrivacyPolicyPage() {
             <ul className="list-disc list-inside space-y-1">
               <li>Provide, operate, and maintain the App.</li>
               <li>Calculate and manage royalties based on fulfilled orders.</li>
-              <li>Bill you through Shopify’s usage-based and capped billing systems.</li>
+              <li>
+                Bill you through Shopify’s usage-based and capped billing
+                systems.
+              </li>
               <li>Communicate with you for support and updates.</li>
               <li>Improve the App’s functionality and performance.</li>
               <li>Comply with applicable legal obligations.</li>
@@ -114,11 +123,24 @@ export default function PrivacyPolicyPage() {
               4. Your Rights (GDPR & CCPA)
             </h2>
             <ul className="list-disc list-inside space-y-1">
-              <li><strong>Access & Portability:</strong> Request a copy of your data.</li>
-              <li><strong>Correction:</strong> Ask us to fix inaccurate data.</li>
-              <li><strong>Erasure (“Right to be Forgotten”):</strong> Request deletion of your data.</li>
-              <li><strong>Objection:</strong> Object to processing of your data.</li>
-              <li><strong>Withdraw Consent:</strong> Withdraw consent anytime (where applicable).</li>
+              <li>
+                <strong>Access & Portability:</strong> Request a copy of your
+                data.
+              </li>
+              <li>
+                <strong>Correction:</strong> Ask us to fix inaccurate data.
+              </li>
+              <li>
+                <strong>Erasure (“Right to be Forgotten”):</strong> Request
+                deletion of your data.
+              </li>
+              <li>
+                <strong>Objection:</strong> Object to processing of your data.
+              </li>
+              <li>
+                <strong>Withdraw Consent:</strong> Withdraw consent anytime
+                (where applicable).
+              </li>
             </ul>
             <p className="mt-2">
               To exercise these rights, contact us at{" "}
@@ -127,7 +149,8 @@ export default function PrivacyPolicyPage() {
                 className="text-blue-600 hover:text-blue-800 underline transition-colors"
               >
                 {SUPPORT_EMAIL}
-              </a>.
+              </a>
+              .
             </p>
           </div>
 
@@ -162,7 +185,8 @@ export default function PrivacyPolicyPage() {
               7. Contact Us
             </h2>
             <p>
-              If you have any questions about this Privacy Policy, please contact us at:
+              If you have any questions about this Privacy Policy, please
+              contact us at:
             </p>
             <p>
               <strong>Email:</strong>{" "}
