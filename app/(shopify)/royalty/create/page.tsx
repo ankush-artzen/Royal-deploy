@@ -28,6 +28,7 @@ export default function AssignRoyalty() {
   const [shop, setShop] = useState<string | null>(null);
   const [billingActive, setBillingActive] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasExpiry, setHasExpiry] = useState(false);
 
   const [selectedDesigner, setSelectedDesigner] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<{
@@ -285,15 +286,36 @@ export default function AssignRoyalty() {
                     autoComplete="off"
                     disabled={!billingActive}
                   />
+                  {/* #added expiry */}
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={hasExpiry}
+                      onChange={(e) => {
+                        setHasExpiry(e.target.checked);
+                        if (!e.target.checked) setExpiry("");
+                      }}
+                      disabled={!billingActive}
+                    />
+                    Set expiry date
+                  </label>
 
-                  <TextField
-                    label="Expiry Date & Time"
-                    type="datetime-local"
-                    value={expiry}
-                    onChange={setExpiry}
-                    autoComplete="off"
-                    disabled={!billingActive}
-                  />
+                  {hasExpiry && (
+                    <TextField
+                      label="Expiry Date & Time"
+                      type="datetime-local"
+                      value={expiry}
+                      onChange={setExpiry}
+                      autoComplete="off"
+                      disabled={!billingActive}
+                    />
+                  )}
                 </FormLayout>
               </BlockStack>
             </Card>

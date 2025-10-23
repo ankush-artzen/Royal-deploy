@@ -4,10 +4,7 @@ import { convertCurrency } from "@/lib/config/currency-utils";
 
 export const dynamic = "force-dynamic";
 
-
 const API_VERSION = "2025-07";
-
-
 
 async function getActiveRoyaltySubscriptionByShop(shop: string) {
   const normalizedShop = shop.toLowerCase();
@@ -103,19 +100,22 @@ export async function createRoyaltyTransactionForOrder({
         }),
       },
     );
-  
+
     console.log("📡 Shopify usage charge response status:", resp.status);
-  
+
     const data = await resp.json();
-  
+
     // 🔍 Print full response for debugging
-    console.log("📦 Full Shopify usage charge response:", JSON.stringify(data, null, 2));
-  
+    console.log(
+      "📦 Full Shopify usage charge response:",
+      JSON.stringify(data, null, 2),
+    );
+
     if (!resp.ok || !data.usage_charge) {
       console.error("❌ Shopify usage charge failed:", data);
       throw new Error(`Shopify usage charge failed: ${JSON.stringify(data)}`);
     }
-  
+
     usageChargeData = data.usage_charge;
     console.log(
       `✅ Shopify usage charge created [id=${usageChargeData.id}, price=${usageChargeData.price} USD]`,
@@ -124,7 +124,7 @@ export async function createRoyaltyTransactionForOrder({
     console.error("❌ Error creating Shopify usage charge:", err);
     throw err;
   }
-  
+
   // 5️⃣ Save transaction in DB with race-condition protection
   let royaltyTransaction;
   try {
@@ -175,6 +175,20 @@ export async function createRoyaltyTransactionForOrder({
   console.log(
     `✅ RoyaltyTransaction created [txId=${royaltyTransaction?.id}, orderId=${orderId}, price=${royaltyTransaction?.price} USD]`,
   );
+  // 6️⃣ Create notification after transaction
+  if (royaltyTransaction?.designerId) {
+    await prisma.notification.create({
+      data: {
+        type: "royalty_order",
+        message: `Royalty transaction created for "${royaltyTransaction.orderName}" - ${royaltyTransaction.royaltyPercentage}%`,
+        shop,
+        designerId: royaltyTransaction.designerId,
+      },
+    });
+    console.log(
+      `✅ Royalty notification created for ${royaltyTransaction.orderName} (Designer: ${royaltyTransaction.designerId})`,
+    );
+  }
 
   return royaltyTransaction;
 }

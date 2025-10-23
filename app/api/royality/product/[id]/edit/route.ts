@@ -86,6 +86,25 @@ export async function PUT(
       where: { id: royalty.id },
       data: updateData,
     });
+    // ✅ Create notification entry
+    // await prisma.notification.create({
+    //   data: {
+    //     type: "royalty_assigned",
+    //     message: `Royalty updated for "${royalty.title}" - New rate: ${
+    //       updateData.royality ?? royalty.royality
+    //     }% - Expires ${
+    //       updateData.expiry
+    //         ? new Date(updateData.expiry).toLocaleDateString()
+    //         : royalty.expiry
+    //         ? new Date(royalty.expiry).toLocaleDateString()
+    //         : "Never"
+    //     }`,
+    //     shop,
+    //     designerId: royalty.designerId,
+    //   },
+    // });
+
+    // console.log("✅ Royalty and notification updated successfully");
 
     return NextResponse.json({
       message: SUCCESS_MESSAGES.ROYALTY_UPDATED,

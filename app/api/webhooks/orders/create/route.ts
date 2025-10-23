@@ -154,6 +154,25 @@ export async function POST(req: NextRequest) {
         }
 
         if (lineItemsToAdd.length === 0) return null;
+        for (const li of lineItemsToAdd) {
+          if (li.designerId && li.royaltyPercentage !== undefined) {
+            await tx.notification.create({
+              data: {
+                type: "royalty_order",
+                message: `Order created: "${li.title}" at ${li.royaltyPercentage}%`,
+                shop,
+                designerId: li.designerId,
+              },
+            });
+            console.log(
+              `✅ Royalty notification created for ${li.title} (Designer: ${li.designerId})`,
+            );
+
+            console.log(
+              `✅ Royalty notification created for ${li.title} (Designer: ${li.designerId})`,
+            );
+          }
+        }
 
         // Update product royalties
         await Promise.all(

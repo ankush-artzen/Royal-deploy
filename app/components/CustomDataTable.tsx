@@ -1,7 +1,7 @@
 "use client";
 
 import { FC } from "react";
-import { Card, DataTable, Spinner, EmptyState, Text } from "@shopify/polaris";
+import { Card, DataTable, Spinner, EmptyState, Text, Box} from "@shopify/polaris";
 import { EMPTY_STATE_IMAGE } from "@/lib/config/royaltyConfig";
 
 interface CustomDataTableProps {
@@ -32,9 +32,12 @@ const CustomDataTable: FC<CustomDataTableProps> = ({
       ) : error ? (
         <div style={{ padding: "32px", color: "red" }}>{error}</div>
       ) : rows.length === 0 ? (
+        <Box paddingBlockEnd="400">
+
         <EmptyState heading={emptyStateMessage} image={emptyStateImage}>
           <p>{emptyStateMessage}</p>
         </EmptyState>
+        </Box>
       ) : (
         <div className="custom-table-wrapper" style={{ overflowX: "auto" }}>
           <style jsx global>{`

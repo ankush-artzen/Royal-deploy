@@ -99,7 +99,7 @@ export const useBillingData = (app: any, dispatch: AppDispatch) => {
   // Fetch transactions
   useEffect(() => {
     if (!shop || !billingApproved) return;
-
+  
     async function fetchLatestTransaction() {
       setLoadingTx(true);
       try {
@@ -107,23 +107,35 @@ export const useBillingData = (app: any, dispatch: AppDispatch) => {
           `/api/royality/orders/transaction/balanceused?shop=${shop}`,
         );
         const data = await res.json();
-
-        console.log("Fetched latest transaction data:", data); // ← debug here
-
-        if (res.ok && data.success) {
+  
+        console.log("Fetched latest transaction data:", data);
+  
+        if (res.ok && data.success && data.latestTransaction) {
           setLatestTransaction(data.latestTransaction);
-          console.log("Set latestTransaction state:", data.latestTransaction); // ← debug state
+        } else {
+          // Fallback when no transaction exists
+          setLatestTransaction({
+            balanceUsed: 0,
+            cappedAmount: cappedAmount ?? 0,
+            currency: shopCurrency ?? "USD",
+          });
         }
       } catch (err) {
         console.error("Error fetching transactions:", err);
+        // Fallback on error too
+        setLatestTransaction({
+          balanceUsed: 0,
+          cappedAmount: cappedAmount ?? 0,
+          currency: shopCurrency ?? "USD",
+        });
       } finally {
         setLoadingTx(false);
       }
     }
-
+  
     fetchLatestTransaction();
-  }, [shop, billingApproved]);
-
+  }, [shop, billingApproved, cappedAmount, shopCurrency]);
+  
   // Fetch capped amount if missing
   useEffect(() => {
     if (!shop || !billingApproved || cappedAmount !== null) return;

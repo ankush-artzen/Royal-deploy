@@ -1,4 +1,5 @@
-import Home from "../client.page";
+import HomeClient from "../components/homepage";
+
 
 export default async function Page({
   params,
@@ -15,5 +16,5 @@ export default async function Page({
 
   // now we can use the new managed app bridge, so we don't need to
   // worry about checking if the app is installed or not
-  return <Home />;
+  return <HomeClient />;
 }
