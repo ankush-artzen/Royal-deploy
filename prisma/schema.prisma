@@ -103,14 +103,15 @@ model ProductRoyalty {
   status              String?
   inArchive           Boolean?
   designerId          String
-  royality            Float?
+  royality            Float
   shop                String?
   totalSold           Int       @default(0)
-  totalRoyaltyEarned  Json?     
+  totalRoyaltyEarned  Json?
   designer            Designer  @relation(fields: [designerId], references: [id])
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
-  price           Json?     @default("{\"amount\":0,\"currency\":\"\",\"storeCurrency\":\"\",\"storeAmount\":0}")
+  price               Json?     @default("{\"amount\":0,\"currency\":\"\",\"storeCurrency\":\"\",\"storeAmount\":0}")
+  expiry              DateTime? 
 
   @@unique([productId, designerId])
 }
@@ -178,17 +179,24 @@ model RoyaltySubscription {
 }
 
 model RoyaltyTransaction {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  shop            String   
+  id                         String   @id @default(auto()) @map("_id") @db.ObjectId
+  shop                       String   
   shopifyTransactionChargeId String
-  orderId         String
-  description     String
-  price           Float
-  currency        String
-  balanceUsed     Float
-  balanceRemaining Float
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  orderId                    String
+  orderName                  String?
+  productId                  String?  
+  description                String
+  price                      Json  
+  currency                   String 
+  status                     String?
+  balanceUsed                Float?   
+  balanceRemaining           Float?   
+  royaltyPercentage          Float?     
+  designerId                 String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@unique([shop, orderId, productId,shopifyTransactionChargeId,designerId], name: "shop_orderId_productId_shopifyTransactionChargeId_designerId")
 }
 
 model user{

@@ -8,56 +8,46 @@ import {
   Box,
 } from "@shopify/polaris";
 
-interface BalanceCardsProps {
-  loadingTx: boolean;
-  latestTransaction?: {
-    balanceUsed?: number;
-    cappedAmount?: number;
-    currency?: string;
-  } | null;
-  shopCurrency?: string;
-  balanceUsedINR?: number;
-  balanceRemainingINR?: number;
-  cappedAmount?: number;
-  cappedCurrency?: string;
-  cappedAmountINR?: number;
-}
-
 const BalanceCards = ({
   loadingTx,
   latestTransaction,
   shopCurrency,
+  balanceUsedINR,
+  balanceRemainingINR,
   cappedAmount,
   cappedCurrency,
+  cappedAmountINR,
 }: BalanceCardsProps) => {
   /** === Layout constants === */
   const CARD_WIDTH = "350px";
   const CARD_MIN_HEIGHT = "60px";
   const CARD_PADDING = "100";
+  const STACK_GAP_OUTER = "400";
   const STACK_GAP_INNER = "1600"; // space between cards
   const CONTENT_GAP = "200";
   const LOADING_SPINNER_SIZE: "small" | "large" = "small";
 
-  /** === Reusable balance renderer === */
   const renderBalanceCard = (
+    title: string,
     value: number | null | undefined,
     currency: string | null | undefined,
-    tone?: "critical" | "success" | "subdued"
+    tone: "critical" | "success" | "subdued",
   ) => {
-    const displayValue = value ?? 0;
-    const displayCurrency = currency ?? shopCurrency ?? "USD"; // fallback currency
-
     return (
-      <Text as="h2" variant="headingMd" tone={tone ?? "subdued"} fontWeight="bold">
-        {displayCurrency} {displayValue.toFixed(2)}
+      <Text as="h2" variant="headingMd" tone={tone} fontWeight="bold">
+        {currency ?? "USD"} {value?.toFixed(2)}
       </Text>
     );
   };
 
-  /** === Loading card === */
+  // Fixed loading card content to match actual card structure
   const renderLoadingCard = (title: string, description: string) => (
     <Card background="bg-surface-info">
-      <Box width={CARD_WIDTH} minHeight={CARD_MIN_HEIGHT} padding={CARD_PADDING}>
+      <Box
+        width={CARD_WIDTH}
+        minHeight={CARD_MIN_HEIGHT}
+        padding={CARD_PADDING}
+      >
         <BlockStack gap={CONTENT_GAP}>
           <Text as="h3" variant="headingMd" tone="subdued">
             {title}
@@ -66,7 +56,10 @@ const BalanceCards = ({
             {description}
           </Text>
           <InlineStack align="center" gap={CONTENT_GAP}>
-            <Spinner accessibilityLabel={`Loading ${title}`} size={LOADING_SPINNER_SIZE} />
+            <Spinner
+              accessibilityLabel={`Loading ${title}`}
+              size={LOADING_SPINNER_SIZE}
+            />
             <Text as="p" tone="subdued">
               Loading...
             </Text>
@@ -76,37 +69,48 @@ const BalanceCards = ({
     </Card>
   );
 
-  /** === Render === */
   return (
     <Banner title="Royalty Amount Status" tone="info">
       <InlineStack align="center" gap={STACK_GAP_INNER}>
         {loadingTx ? (
           <>
+            {/* Loading state - Balance Used */}
             {renderLoadingCard(
               "Balance Used",
-              "Total amount already utilized from your subscription capped amount"
+              "Total amount already utilized from your subscription capped amount",
             )}
+
+            {/* Loading state - Capped Amount */}
             {renderLoadingCard(
               "Capped Amount",
-              "Maximum allowed capped amount spending limit for your plan"
+              "Maximum allowed capped amount spending limit for your plan",
             )}
           </>
         ) : (
           <>
             {/* Balance Used */}
             <Card background="bg-surface-info">
-              <Box width={CARD_WIDTH} minHeight={CARD_MIN_HEIGHT} padding={CARD_PADDING}>
+              <Box
+                width={CARD_WIDTH}
+                minHeight={CARD_MIN_HEIGHT}
+                padding={CARD_PADDING}
+              >
                 <BlockStack gap={CONTENT_GAP}>
                   <Text as="h3" variant="headingLg" fontWeight="bold">
                     Balance Used
                   </Text>
                   <Text as="p" tone="subdued">
-                    Total amount already utilized from your subscription capped amount
+                    Total amount already utilized from your subscription capped
+                    amount
                   </Text>
                   {renderBalanceCard(
+                    "Balance Used",
                     latestTransaction?.balanceUsed ?? 0,
-                    latestTransaction?.currency ?? shopCurrency,
-                    (latestTransaction?.balanceUsed ?? 0) > 0 ? "subdued" : "success"
+                    latestTransaction?.currency ?? "USD",
+                    latestTransaction?.balanceUsed &&
+                      latestTransaction.balanceUsed > 0
+                      ? "subdued"
+                      : "success",
                   )}
                 </BlockStack>
               </Box>
@@ -114,7 +118,11 @@ const BalanceCards = ({
 
             {/* Capped Amount */}
             <Card background="bg-surface-info">
-              <Box width={CARD_WIDTH} minHeight={CARD_MIN_HEIGHT} padding={CARD_PADDING}>
+              <Box
+                width={CARD_WIDTH}
+                minHeight={CARD_MIN_HEIGHT}
+                padding={CARD_PADDING}
+              >
                 <BlockStack gap={CONTENT_GAP}>
                   <Text as="h3" variant="headingLg" fontWeight="bold">
                     Capped Amount
@@ -123,9 +131,10 @@ const BalanceCards = ({
                     Maximum allowed capped amount spending limit for your plan
                   </Text>
                   {renderBalanceCard(
-                    latestTransaction?.cappedAmount ?? cappedAmount ?? 0,
-                    latestTransaction?.currency ?? cappedCurrency ?? shopCurrency,
-                    "subdued"
+                    "Capped Amount",
+                    cappedAmount ?? 0, 
+                    cappedCurrency ?? "USD",
+                    "subdued",
                   )}
                 </BlockStack>
               </Box>
