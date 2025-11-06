@@ -97,45 +97,45 @@ export const useBillingData = (app: any, dispatch: AppDispatch) => {
   }, [shop, dispatch]);
 
   // Fetch transactions
-  useEffect(() => {
-    if (!shop || !billingApproved) return;
-  
-    async function fetchLatestTransaction() {
-      setLoadingTx(true);
-      try {
-        const res = await fetch(
-          `/api/royality/orders/transaction/balanceused?shop=${shop}`,
-        );
-        const data = await res.json();
-  
-        console.log("Fetched latest transaction data:", data);
-  
-        if (res.ok && data.success && data.latestTransaction) {
-          setLatestTransaction(data.latestTransaction);
-        } else {
-          // Fallback when no transaction exists
-          setLatestTransaction({
-            balanceUsed: 0,
-            cappedAmount: cappedAmount ?? 0,
-            currency: shopCurrency ?? "USD",
-          });
-        }
-      } catch (err) {
-        console.error("Error fetching transactions:", err);
-        // Fallback on error too
+ useEffect(() => {
+  if (!shop || !billingApproved) return;
+
+  async function fetchLatestTransaction() {
+    setLoadingTx(true);
+    try {
+      const res = await fetch(
+        `/api/royality/orders/transaction/balanceused?shop=${shop}`,
+      );
+      const data = await res.json();
+
+      console.log("Fetched latest transaction data:", data);
+
+      if (res.ok && data.success && data.latestTransaction) {
+        setLatestTransaction(data.latestTransaction);
+      } else {
+        // Fallback when no transaction exists
         setLatestTransaction({
           balanceUsed: 0,
           cappedAmount: cappedAmount ?? 0,
           currency: shopCurrency ?? "USD",
         });
-      } finally {
-        setLoadingTx(false);
       }
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
+      // Fallback on error too
+      setLatestTransaction({
+        balanceUsed: 0,
+        cappedAmount: cappedAmount ?? 0,
+        currency: shopCurrency ?? "USD",
+      });
+    } finally {
+      setLoadingTx(false);
     }
-  
-    fetchLatestTransaction();
-  }, [shop, billingApproved, cappedAmount, shopCurrency]);
-  
+  }
+
+  fetchLatestTransaction();
+}, [shop, billingApproved, cappedAmount, shopCurrency]);
+
   // Fetch capped amount if missing
   useEffect(() => {
     if (!shop || !billingApproved || cappedAmount !== null) return;

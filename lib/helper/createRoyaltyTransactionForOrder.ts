@@ -190,5 +190,105 @@ export async function createRoyaltyTransactionForOrder({
     );
   }
 
+  // ───── add this block (minimal, non-intrusive) ─────
+  try {
+    if (royaltyTransaction && royaltyTransaction.designerId) {
+      const { designerId: txDesignerId } = royaltyTransaction;
+  
+      const productRoyalty = await prisma.productRoyalty.findUnique({
+        where: {
+          productId_designerId: {
+            productId,
+            designerId: txDesignerId,
+          },
+        },
+      });
+  
+      if (productRoyalty) {
+        // 1️⃣ Read existing totals safely
+        let currentAmount = 0;
+        let currentUsd = 0;
+        let currencyType = currency || "USD";
+        let aggregatedOrders: string[] = [];
+  
+        if (
+          productRoyalty.totalRoyaltyEarned &&
+          typeof productRoyalty.totalRoyaltyEarned === "object"
+        ) {
+          const earned = productRoyalty.totalRoyaltyEarned as any;
+          currentAmount = earned.amount ?? 0;
+          currentUsd = earned.usdAmount ?? 0;
+          currencyType = earned.currency ?? currencyType;
+          aggregatedOrders = Array.isArray(earned._aggregatedOrders)
+            ? earned._aggregatedOrders
+            : [];
+        }
+  
+        // 2️⃣ Skip if this order already processed
+        if (aggregatedOrders.includes(orderId)) {
+          console.log(`⚠️ Order ${orderId} already aggregated for ${productId}, skipping.`);
+          return;
+        }
+  
+        // 3️⃣ Find all transactions for same product/designer/order
+        const variantTransactions = await prisma.royaltyTransaction.findMany({
+          where: {
+            shop,
+            orderId,
+            productId,
+            designerId: txDesignerId,
+          },
+        });
+  
+        // 4️⃣ Sum up variant prices
+        const totalStoreAmount = variantTransactions.reduce((sum, tx) => {
+          const storePrice =
+            typeof tx.price === "object"
+              ? Number((tx.price as any).storeprice || 0)
+              : 0;
+          return sum + storePrice;
+        }, 0);
+  
+        // 5️⃣ Convert to USD
+        const usdAdditionRaw = await convertCurrency(totalStoreAmount, currencyType, "USD");
+        const usdAddition = Number(usdAdditionRaw) || 0;
+  
+        // 6️⃣ Update totals
+        const newAmount = currentAmount + totalStoreAmount;
+        const newUsdAmount = currentUsd + usdAddition;
+  
+        aggregatedOrders.push(orderId); // mark this order processed
+  
+        await prisma.productRoyalty.update({
+          where: {
+            productId_designerId: {
+              productId,
+              designerId: txDesignerId,
+            },
+          },
+          data: {
+            totalRoyaltyEarned: {
+              amount: newAmount,
+              currency: currencyType,
+              usdAmount: newUsdAmount,
+              _aggregatedOrders: aggregatedOrders,
+            },
+          } as any, // 👈 allow JSON merge
+        });
+  
+        console.log(
+          `💰 totalRoyaltyEarned updated for product ${productId} (designer ${txDesignerId}): +${totalStoreAmount} ${currencyType} → ${newAmount} ${currencyType} / ${newUsdAmount} USD (includes all variants from order ${orderId})`,
+        );
+      } else {
+        console.warn(`⚠️ No productRoyalty found for productId=${productId} designer=${txDesignerId}`);
+      }
+    }
+  } catch (err) {
+    console.error("❌ Failed to update totalRoyaltyEarned (non-blocking):", err);
+  }
+  
+
+
+
   return royaltyTransaction;
 }
