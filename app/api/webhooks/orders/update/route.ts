@@ -3,6 +3,7 @@ import prisma from "@/lib/db/prisma-connect";
 import { createRoyaltyTransactionForOrder } from "@/lib/helper/createRoyaltyTransactionForOrder";
 import { convertCurrency } from "@/lib/config/currency-utils";
 
+
 export async function POST(req: NextRequest) {
   try {
     console.log("✅ Orders Updated webhook hit", new Date().toISOString());
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     const productIds: string[] = body.line_items
-      ?.map((item: any) => item.product_id?.toString())
+      ?.map((item: ShopifyLineItem) => item.product_id?.toString())
       .filter(Boolean) as string[];
 
     if (!productIds?.length) {
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     // Prepare line items for royalty transactions and orders
     const lineItemsToAdd: any[] = [];
-    for (const item of body.line_items) {
+    for (const item of body.line_items as ShopifyLineItem[]) {
       const productIdNumeric = item.product_id?.toString();
       if (!productIdNumeric) continue;
 
@@ -161,21 +162,19 @@ export async function POST(req: NextRequest) {
         }
 
         try {
-          // 💰 Create the actual royalty transaction
           await createRoyaltyTransactionForOrder({
             shop,
             orderId,
             orderName,
             productId: li.productId,
             description: `Royalty payment for order ${orderName} - ${li.title}`,
-            price: li.productRoyaltyAmount.store, // storeCurrency amount
+            price: li.productRoyaltyAmount.store,
             currency: storeCurrency,
             royaltyPercentage: li.royaltyPercentage,
             designerId: li.designerId,
             shopifyTransactionChargeId: "", 
           });
-
-          console.log(`✅ Created royalty transaction for ${li.title}`);
+          console.log(`✅ Created transaction for ${li.title}`);
         } catch (error: any) {
           if (
             error.message?.includes("already exists") ||
@@ -216,15 +215,9 @@ export async function POST(req: NextRequest) {
       (r) => r.status === "fulfilled" && r.value !== null
     ).length;
 
-    // ✅ Optional: mark this order as processed
-    // await prisma.royaltyOrder.updateMany({
-    //   where: { shop, orderId },
-    //   data: { transactionsCreated: true },
-    // });
-
-    // console.log(
-    //   `✅ Order ${orderId} processed with ${successfulTransactions} royalty transactions created`,
-    // );
+    console.log(
+      `✅ Order ${orderId} processed with ${successfulTransactions} royalty transactions created`,
+    );
 
     return NextResponse.json({
       success: true,

@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma-connect";
 import { createRoyaltyTransactionForOrder } from "@/lib/helper/createRoyaltyTransactionForOrder";
@@ -9,35 +8,15 @@ export async function POST(req: NextRequest) {
     console.log("✅ Orders webhook hit at", new Date().toISOString());
 
     const shop = req.headers.get("x-shopify-shop-domain");
-    const hmac = req.headers.get("x-shopify-hmac-sha256");
-    const rawBody = await req.text(); // read raw text first (important)
-
-    if (!shop || !hmac) {
-      console.warn("⚠️ Missing required Shopify headers");
+    if (!shop) {
+      console.warn("⚠️ Missing shop header in request");
       return NextResponse.json(
-        { success: false, message: "Missing Shopify headers" },
-        { status: 400 }
+        { success: false, message: "Missing shop header" },
+        { status: 400 },
       );
     }
 
-    // Verify HMAC signature
-    const secret = process.env.SHOPIFY_API_SECRET!;
-    const digest = crypto
-      .createHmac("sha256", secret)
-      .update(rawBody, "utf8")
-      .digest("base64");
-
-    if (digest !== hmac) {
-      console.error("❌ Invalid HMAC signature. Webhook not from Shopify.");
-      return NextResponse.json(
-        { success: false, message: "Unauthorized webhook" },
-        { status: 401 }
-      );
-    }
-
-    // ✅ HMAC verified → parse the JSON safely
-    const body = JSON.parse(rawBody);
-
+    const body = await req.json();
     const orderId = body.id?.toString();
     const orderName = body.name;
     const createdAt = new Date(body.created_at);
@@ -391,4 +370,3 @@ await Promise.all(
     );
   }
 }
-
