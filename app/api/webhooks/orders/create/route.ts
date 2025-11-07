@@ -1,22 +1,39 @@
+import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma-connect";
 import { createRoyaltyTransactionForOrder } from "@/lib/helper/createRoyaltyTransactionForOrder";
 import { convertCurrency } from "@/lib/config/currency-utils";
+import { generatedSignature } from "@/lib/helper/hmacSignature";
 
 export async function POST(req: NextRequest) {
   try {
     console.log("✅ Orders webhook hit at", new Date().toISOString());
 
     const shop = req.headers.get("x-shopify-shop-domain");
-    if (!shop) {
-      console.warn("⚠️ Missing shop header in request");
+    const hmac = req.headers.get("x-shopify-hmac-sha256");
+    const body = await req.json(); 
+
+    if (!shop || !hmac) {
+      console.warn("⚠️ Missing required Shopify headers");
       return NextResponse.json(
-        { success: false, message: "Missing shop header" },
+        { success: false, message: "Missing Shopify headers" },
         { status: 400 },
       );
     }
 
-    const body = await req.json();
+    // Verify HMAC signature
+    const digest = generatedSignature(body);
+    console.log("🧩 Shopify HMAC:", hmac);
+    console.log("🧩 Local digest:", digest);
+    
+    if (digest !== hmac) {
+      console.error("❌ Invalid HMAC signature. Webhook not from Shopify.");
+      return NextResponse.json(
+        { success: false, message: "Unauthorized webhook" },
+        { status: 401 },
+      );
+    }
+
     const orderId = body.id?.toString();
     const orderName = body.name;
     const createdAt = new Date(body.created_at);
@@ -173,58 +190,16 @@ export async function POST(req: NextRequest) {
             );
           }
         }
-
-        // Update product royalties
-        // await Promise.all(
-        //   royaltyUpdates.map(async (update) => {
-        //     const productRoyalty = await tx.productRoyalty.findUnique({
-        //       where: { id: update.id },
-        //     });
-
-        //     // Force TypeScript to treat totalRoyaltyEarned as object
-        //     const prev = (productRoyalty?.totalRoyaltyEarned as {
-        //       amount: number;
-        //       currency: string;
-        //       usdAmount: number;
-        //     }) || { amount: 0, currency: storeCurrency, usdAmount: 0 };
-
-        //     // Convert current royalty to USD
-        //     // const usdAmount = await convertCurrency(
-        //     //   update.amount,
-        //     //   storeCurrency,
-        //     //   "USD",
-        //     // );
-        //     const usdAmount =
-        //       storeCurrency === "USD"
-        //         ? update.amount
-        //         : await convertCurrency(update.amount, storeCurrency, "USD");
-
-        //     const newTotal = {
-        //       amount: prev.amount + update.amount,
-        //       currency: storeCurrency,
-        //       usdAmount: prev.usdAmount + usdAmount,
-        //     };
-
-        //     return tx.productRoyalty.update({
-        //       where: { id: update.id },
-        //       data: {
-        //         totalSold: { increment: update.quantity },
-        //         totalRoyaltyEarned: newTotal,
-        //       },
-        //     });
-        //   }),
-        // );
-// ✅ Only update totalSold during order creation
-await Promise.all(
-  royaltyUpdates.map(async (update) => {
-    return tx.productRoyalty.update({
-      where: { id: update.id },
-      data: {
-        totalSold: { increment: update.quantity },
-      },
-    });
-  }),
-);
+        await Promise.all(
+          royaltyUpdates.map(async (update) => {
+            return tx.productRoyalty.update({
+              where: { id: update.id },
+              data: {
+                totalSold: { increment: update.quantity },
+              },
+            });
+          }),
+        );
 
         const calculatedRoyaltyAmount = lineItemsToAdd.reduce(
           (sum, li) => sum + li.productRoyaltyAmount,

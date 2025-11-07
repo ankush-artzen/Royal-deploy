@@ -22,13 +22,13 @@ export async function createRoyaltyTransactionForOrder({
   orderName,
   productId,
   description,
-  price, // raw amount (INR, etc.)
+  price,
   currency,
   royaltyPercentage,
   shopifyTransactionChargeId,
   designerId,
 }: CreateRoyaltyTxParams) {
-  // 1️⃣ Skip if price invalid
+  // Skip if price invalid
   if (typeof price !== "number" || isNaN(price) || price <= 0) {
     console.warn(
       `⚠️ Skipping royalty transaction for product ${productId}, invalid price: ${price}`,
@@ -37,18 +37,18 @@ export async function createRoyaltyTransactionForOrder({
   }
   console.log("price-------------------------", price);
 
-  // 2️⃣ Convert to USD for Shopify usage charge
+  // Convert to USD for Shopify usage charge
   let priceInUSD = await convertCurrency(price, currency, "USD");
-  priceInUSD = Number(priceInUSD.toFixed(2)); // round properly
+  priceInUSD = Number(priceInUSD.toFixed(2));
   if (isNaN(priceInUSD) || priceInUSD <= 0) {
     console.warn(
       `⚠️ Skipping royalty transaction for product ${productId}, conversion failed: ${price} ${currency}`,
     );
     return null;
   }
-  console.log(`💵 Final charge amount for Shopify: ${priceInUSD} USD`);
+  console.log(` Final charge amount for Shopify: ${priceInUSD} USD`);
 
-  // 3️⃣ Check if transaction already exists
+  //  Check if transaction already exists
   const existingTx = await prisma.royaltyTransaction.findUnique({
     where: {
       shop_orderId_productId_shopifyTransactionChargeId_designerId: {
@@ -62,7 +62,7 @@ export async function createRoyaltyTransactionForOrder({
   });
   if (existingTx) return existingTx;
 
-  // 4️⃣ Create Shopify usage charge with USD amount
+  // 4️Create Shopify usage charge with USD amount
   const subscriptionRecord = await getActiveRoyaltySubscriptionByShop(shop);
   const chargeId = subscriptionRecord.chargeId!;
   const sessions = (await findSessionsByShop(shop)) as
@@ -79,7 +79,7 @@ export async function createRoyaltyTransactionForOrder({
   }
 
   console.log(
-    `🔑 Using chargeId=${chargeId}, posting usage_charge with price=${priceInUSD} USD`,
+    ` Using chargeId=${chargeId}, posting usage_charge with price=${priceInUSD} USD`,
   );
 
   let usageChargeData;
@@ -95,7 +95,7 @@ export async function createRoyaltyTransactionForOrder({
         body: JSON.stringify({
           usage_charge: {
             description,
-            price: priceInUSD, // must be the converted USD
+            price: priceInUSD,
           },
         }),
       },
@@ -105,14 +105,14 @@ export async function createRoyaltyTransactionForOrder({
 
     const data = await resp.json();
 
-    // 🔍 Print full response for debugging
+    //  debugging
     console.log(
       "📦 Full Shopify usage charge response:",
       JSON.stringify(data, null, 2),
     );
 
     if (!resp.ok || !data.usage_charge) {
-      console.error("❌ Shopify usage charge failed:", data);
+      console.error(" Shopify usage charge failed:", data);
       throw new Error(`Shopify usage charge failed: ${JSON.stringify(data)}`);
     }
 
@@ -121,11 +121,11 @@ export async function createRoyaltyTransactionForOrder({
       `✅ Shopify usage charge created [id=${usageChargeData.id}, price=${usageChargeData.price} USD]`,
     );
   } catch (err) {
-    console.error("❌ Error creating Shopify usage charge:", err);
+    console.error(" Error creating Shopify usage charge:", err);
     throw err;
   }
 
-  // 5️⃣ Save transaction in DB with race-condition protection
+  //  Save transaction in DB with race-condition protection
   let royaltyTransaction;
   try {
     royaltyTransaction = await prisma.royaltyTransaction.create({
@@ -173,9 +173,9 @@ export async function createRoyaltyTransactionForOrder({
   }
 
   console.log(
-    `✅ RoyaltyTransaction created [txId=${royaltyTransaction?.id}, orderId=${orderId}, price=${royaltyTransaction?.price} USD]`,
+    ` RoyaltyTransaction created [txId=${royaltyTransaction?.id}, orderId=${orderId}, price=${royaltyTransaction?.price} USD]`,
   );
-  // 6️⃣ Create notification after transaction
+  // Create notification after transaction
   if (royaltyTransaction?.designerId) {
     await prisma.notification.create({
       data: {
@@ -186,109 +186,9 @@ export async function createRoyaltyTransactionForOrder({
       },
     });
     console.log(
-      `✅ Royalty notification created for ${royaltyTransaction.orderName} (Designer: ${royaltyTransaction.designerId})`,
+      ` Royalty notification created for ${royaltyTransaction.orderName} (Designer: ${royaltyTransaction.designerId})`,
     );
   }
-
-  // ───── add this block (minimal, non-intrusive) ─────
-  try {
-    if (royaltyTransaction && royaltyTransaction.designerId) {
-      const { designerId: txDesignerId } = royaltyTransaction;
-  
-      const productRoyalty = await prisma.productRoyalty.findUnique({
-        where: {
-          productId_designerId: {
-            productId,
-            designerId: txDesignerId,
-          },
-        },
-      });
-  
-      if (productRoyalty) {
-        // 1️⃣ Read existing totals safely
-        let currentAmount = 0;
-        let currentUsd = 0;
-        let currencyType = currency || "USD";
-        let aggregatedOrders: string[] = [];
-  
-        if (
-          productRoyalty.totalRoyaltyEarned &&
-          typeof productRoyalty.totalRoyaltyEarned === "object"
-        ) {
-          const earned = productRoyalty.totalRoyaltyEarned as any;
-          currentAmount = earned.amount ?? 0;
-          currentUsd = earned.usdAmount ?? 0;
-          currencyType = earned.currency ?? currencyType;
-          aggregatedOrders = Array.isArray(earned._aggregatedOrders)
-            ? earned._aggregatedOrders
-            : [];
-        }
-  
-        // 2️⃣ Skip if this order already processed
-        if (aggregatedOrders.includes(orderId)) {
-          console.log(`⚠️ Order ${orderId} already aggregated for ${productId}, skipping.`);
-          return;
-        }
-  
-        // 3️⃣ Find all transactions for same product/designer/order
-        const variantTransactions = await prisma.royaltyTransaction.findMany({
-          where: {
-            shop,
-            orderId,
-            productId,
-            designerId: txDesignerId,
-          },
-        });
-  
-        // 4️⃣ Sum up variant prices
-        const totalStoreAmount = variantTransactions.reduce((sum, tx) => {
-          const storePrice =
-            typeof tx.price === "object"
-              ? Number((tx.price as any).storeprice || 0)
-              : 0;
-          return sum + storePrice;
-        }, 0);
-  
-        // 5️⃣ Convert to USD
-        const usdAdditionRaw = await convertCurrency(totalStoreAmount, currencyType, "USD");
-        const usdAddition = Number(usdAdditionRaw) || 0;
-  
-        // 6️⃣ Update totals
-        const newAmount = currentAmount + totalStoreAmount;
-        const newUsdAmount = currentUsd + usdAddition;
-  
-        aggregatedOrders.push(orderId); // mark this order processed
-  
-        await prisma.productRoyalty.update({
-          where: {
-            productId_designerId: {
-              productId,
-              designerId: txDesignerId,
-            },
-          },
-          data: {
-            totalRoyaltyEarned: {
-              amount: newAmount,
-              currency: currencyType,
-              usdAmount: newUsdAmount,
-              _aggregatedOrders: aggregatedOrders,
-            },
-          } as any, // 👈 allow JSON merge
-        });
-  
-        console.log(
-          `💰 totalRoyaltyEarned updated for product ${productId} (designer ${txDesignerId}): +${totalStoreAmount} ${currencyType} → ${newAmount} ${currencyType} / ${newUsdAmount} USD (includes all variants from order ${orderId})`,
-        );
-      } else {
-        console.warn(`⚠️ No productRoyalty found for productId=${productId} designer=${txDesignerId}`);
-      }
-    }
-  } catch (err) {
-    console.error("❌ Failed to update totalRoyaltyEarned (non-blocking):", err);
-  }
-  
-
-
 
   return royaltyTransaction;
 }

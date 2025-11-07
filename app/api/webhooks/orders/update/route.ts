@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma-connect";
 import { createRoyaltyTransactionForOrder } from "@/lib/helper/createRoyaltyTransactionForOrder";
 import { convertCurrency } from "@/lib/config/currency-utils";
-
+import { generatedSignature } from "@/lib/helper/hmacSignature";
 
 export async function POST(req: NextRequest) {
   try {
     console.log("✅ Orders Updated webhook hit", new Date().toISOString());
 
     const shop = req.headers.get("x-shopify-shop-domain");
+    const hmac = req.headers.get("x-shopify-hmac-sha256");
+
     if (!shop) {
       return NextResponse.json(
         { success: false, message: "Missing shop header" },
@@ -17,11 +19,23 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+
+    const digest = generatedSignature(body);
+    console.log("🧩 Shopify HMAC:", hmac);
+    console.log("🧩 Local digest:", digest);
+    
+    if (digest !== hmac) {
+      console.error("❌ Invalid HMAC signature. Webhook not from Shopify.");
+      return NextResponse.json(
+        { success: false, message: "Unauthorized webhook" },
+        { status: 401 },
+      );
+    }
+
     const orderId = body.id?.toString();
     const orderName = body.name;
     const currency = body.currency || "USD";
     const storeCurrency = body.presentment_currency || currency;
-
     console.log("🔍 Incoming order update:", {
       id: orderId,
       financial_status: body.financial_status,
