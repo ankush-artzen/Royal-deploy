@@ -1,11 +1,11 @@
+export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma-connect";
 import { createRoyaltyTransactionForOrder } from "@/lib/helper/createRoyaltyTransactionForOrder";
 import { convertCurrency } from "@/lib/config/currency-utils";
 import { generatedSignature } from "@/lib/helper/hmacSignature";
-export const config = {
-  runtime: "nodejs",
-};
+
 export async function POST(req: NextRequest) {
   try {
     console.log("✅ Orders webhook hit at", new Date().toISOString());
