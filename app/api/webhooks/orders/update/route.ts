@@ -11,19 +11,21 @@ export async function POST(req: NextRequest) {
     const shop = req.headers.get("x-shopify-shop-domain");
     const hmac = req.headers.get("x-shopify-hmac-sha256");
 
-    if (!shop) {
+    if (!shop || !hmac) {
       return NextResponse.json(
-        { success: false, message: "Missing shop header" },
+        { success: false, message: "Missing Shopify headers" },
         { status: 400 },
       );
     }
 
-    const body = await req.json();
+    // ✅ Read raw body for HMAC verification
+    const rawBody = await req.text();
 
-    const digest = generatedSignature(body);
+    // ✅ Generate digest from raw string
+    const digest = generatedSignature(rawBody);
     console.log("🧩 Shopify HMAC:", hmac);
     console.log("🧩 Local digest:", digest);
-    
+
     if (digest !== hmac) {
       console.error("❌ Invalid HMAC signature. Webhook not from Shopify.");
       return NextResponse.json(
@@ -31,6 +33,9 @@ export async function POST(req: NextRequest) {
         { status: 401 },
       );
     }
+
+    // ✅ Parse JSON only after HMAC verification
+    const body = JSON.parse(rawBody);
 
     const orderId = body.id?.toString();
     const orderName = body.name;
@@ -57,7 +62,7 @@ export async function POST(req: NextRequest) {
     }
 
     const productIds: string[] = body.line_items
-      ?.map((item: ShopifyLineItem) => item.product_id?.toString())
+      ?.map((item: any) => item.product_id?.toString())
       .filter(Boolean) as string[];
 
     if (!productIds?.length) {
@@ -100,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     // Prepare line items for royalty transactions and orders
     const lineItemsToAdd: any[] = [];
-    for (const item of body.line_items as ShopifyLineItem[]) {
+    for (const item of body.line_items) {
       const productIdNumeric = item.product_id?.toString();
       if (!productIdNumeric) continue;
 
@@ -176,19 +181,21 @@ export async function POST(req: NextRequest) {
         }
 
         try {
+          // 💰 Create the actual royalty transaction
           await createRoyaltyTransactionForOrder({
             shop,
             orderId,
             orderName,
             productId: li.productId,
             description: `Royalty payment for order ${orderName} - ${li.title}`,
-            price: li.productRoyaltyAmount.store,
+            price: li.productRoyaltyAmount.store, // storeCurrency amount
             currency: storeCurrency,
             royaltyPercentage: li.royaltyPercentage,
             designerId: li.designerId,
-            shopifyTransactionChargeId: "", 
+            shopifyTransactionChargeId: "",
           });
-          console.log(`✅ Created transaction for ${li.title}`);
+
+          console.log(`✅ Created royalty transaction for ${li.title}`);
         } catch (error: any) {
           if (
             error.message?.includes("already exists") ||
@@ -226,20 +233,26 @@ export async function POST(req: NextRequest) {
     }
 
     const successfulTransactions = transactionResults.filter(
-      (r) => r.status === "fulfilled" && r.value !== null
+      (r) => r.status === "fulfilled" && r.value !== null,
     ).length;
 
-    console.log(
-      `✅ Order ${orderId} processed with ${successfulTransactions} royalty transactions created`,
-    );
+    // ✅ Optional: mark this order as processed
+    // await prisma.royaltyOrder.updateMany({
+    //   where: { shop, orderId },
+    //   data: { transactionsCreated: true },
+    // });
+
+    // console.log(
+    //   `✅ Order ${orderId} processed with ${successfulTransactions} royalty transactions created`,
+    // );
 
     return NextResponse.json({
       success: true,
-      royaltyOrder: { 
-        orderId, 
-        orderName, 
+      royaltyOrder: {
+        orderId,
+        orderName,
         totalItems: lineItemsToAdd.length,
-        transactionsCreated: successfulTransactions
+        transactionsCreated: successfulTransactions,
       },
     });
   } catch (error: any) {
@@ -254,3 +267,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
