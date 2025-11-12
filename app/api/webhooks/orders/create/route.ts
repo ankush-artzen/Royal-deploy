@@ -3,6 +3,7 @@ import prisma from "@/lib/db/prisma-connect";
 import { createRoyaltyTransactionForOrder } from "@/lib/helper/createRoyaltyTransactionForOrder";
 import { convertCurrency } from "@/lib/config/currency-utils";
 import { generatedSignature } from "@/lib/helper/hmacSignature";
+import crypto from "node:crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,32 +12,42 @@ export async function POST(req: NextRequest) {
     const shop = req.headers.get("x-shopify-shop-domain");
     const hmac = req.headers.get("x-shopify-hmac-sha256");
 
-    // ✅ Read raw body before parsing
-    const rawBody = await req.text();
+    // ✅ Read raw body as bytes (important for exact HMAC match)
+    const arrayBuffer = await req.arrayBuffer();
+    const rawBody = Buffer.from(arrayBuffer);
 
     if (!shop || !hmac) {
       console.warn("⚠️ Missing required Shopify headers");
       return NextResponse.json(
         { success: false, message: "Missing Shopify headers" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // ✅ Verify HMAC using raw body string
+    // ✅ Generate local digest using the raw bytes
     const digest = generatedSignature(rawBody);
+
     console.log("🧩 Shopify HMAC:", hmac);
     console.log("🧩 Local digest:", digest);
 
-    if (digest !== hmac) {
+    // ✅ Timing-safe HMAC comparison
+    const validHmac =
+      hmac.length === digest.length &&
+      crypto.timingSafeEqual(
+        Buffer.from(hmac, "base64"),
+        Buffer.from(digest, "base64")
+      );
+
+    if (!validHmac) {
       console.error("❌ Invalid HMAC signature. Webhook not from Shopify.");
       return NextResponse.json(
         { success: false, message: "Unauthorized webhook" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
-    // ✅ Only parse after verifying
-    const body = JSON.parse(rawBody);
+    // ✅ Parse JSON only after verification
+    const body = JSON.parse(rawBody.toString("utf8"));
 
     // ✅ Continue your existing logic
     const orderId = body.id?.toString();
@@ -44,7 +55,6 @@ export async function POST(req: NextRequest) {
     const createdAt = new Date(body.created_at);
     const currency = body.currency || "USD";
     const storeCurrency = body.presentment_currency || currency;
-
 
     if (!orderId || !body.line_items) {
       console.warn("⚠️ Invalid order data:", body);

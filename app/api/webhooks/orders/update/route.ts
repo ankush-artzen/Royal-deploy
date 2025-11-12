@@ -3,44 +3,59 @@ import prisma from "@/lib/db/prisma-connect";
 import { createRoyaltyTransactionForOrder } from "@/lib/helper/createRoyaltyTransactionForOrder";
 import { convertCurrency } from "@/lib/config/currency-utils";
 import { generatedSignature } from "@/lib/helper/hmacSignature";
+import crypto from "node:crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    console.log("✅ Orders Updated webhook hit", new Date().toISOString());
+    console.log("✅ Orders webhook hit at", new Date().toISOString());
 
     const shop = req.headers.get("x-shopify-shop-domain");
     const hmac = req.headers.get("x-shopify-hmac-sha256");
 
+    // ✅ Read raw body as bytes (important for exact HMAC match)
+    const arrayBuffer = await req.arrayBuffer();
+    const rawBody = Buffer.from(arrayBuffer);
+
     if (!shop || !hmac) {
+      console.warn("⚠️ Missing required Shopify headers");
       return NextResponse.json(
         { success: false, message: "Missing Shopify headers" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // ✅ Read raw body for HMAC verification
-    const rawBody = await req.text();
-
-    // ✅ Generate digest from raw string
+    // ✅ Generate local digest using the raw bytes
     const digest = generatedSignature(rawBody);
+
     console.log("🧩 Shopify HMAC:", hmac);
     console.log("🧩 Local digest:", digest);
 
-    if (digest !== hmac) {
+    // ✅ Timing-safe HMAC comparison
+    const validHmac =
+      hmac.length === digest.length &&
+      crypto.timingSafeEqual(
+        Buffer.from(hmac, "base64"),
+        Buffer.from(digest, "base64")
+      );
+
+    if (!validHmac) {
       console.error("❌ Invalid HMAC signature. Webhook not from Shopify.");
       return NextResponse.json(
         { success: false, message: "Unauthorized webhook" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
-    // ✅ Parse JSON only after HMAC verification
-    const body = JSON.parse(rawBody);
+    // ✅ Parse JSON only after verification
+    const body = JSON.parse(rawBody.toString("utf8"));
 
+    // ✅ Continue your existing logic
     const orderId = body.id?.toString();
     const orderName = body.name;
+    const createdAt = new Date(body.created_at);
     const currency = body.currency || "USD";
     const storeCurrency = body.presentment_currency || currency;
+
     console.log("🔍 Incoming order update:", {
       id: orderId,
       financial_status: body.financial_status,
