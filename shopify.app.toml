@@ -1,8 +1,8 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "6ac50fbc61ef6c598b1519b6879336c7"
-name = "Royal-app-local"
-handle = "royal-app-local"
+client_id = "fafbcc9231c4ca44887ef9b69added43"
+name = "royal-test-1"
+handle = "royal-test-1"
 application_url = "https://royal-deploy.vercel.app"
 embedded = true
 

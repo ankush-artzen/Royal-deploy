@@ -13,47 +13,62 @@ export async function POST(req: NextRequest) {
 
   try {
     const shop = req.headers.get("x-shopify-shop-domain");
-    const hmacHeader = req.headers.get("x-shopify-hmac-sha256");
+    const hmacHeader = req.headers.get("x-shopify-hmac-sha256")?.trim();
     const topic = req.headers.get("x-shopify-topic") || "unknown";
 
     if (!shop) {
       console.error("❌ Missing x-shopify-shop-domain header");
-      return NextResponse.json({ success: false, message: "Missing shop header" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Missing shop header" },
+        { status: 400 },
+      );
     }
+
     if (!hmacHeader) {
       console.error("❌ Missing x-shopify-hmac-sha256 header");
-      return NextResponse.json({ success: false, message: "Missing signature header" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Missing signature header" },
+        { status: 400 },
+      );
     }
 
-    // Get exact raw bytes as received
-    const arrayBuffer = await req.arrayBuffer();
-    const bodyBuffer = Buffer.from(arrayBuffer);
+    // ✅ Get raw body text — important for exact HMAC match on Vercel
+    const rawBodyText = await req.text();
+    const bodyBuffer = Buffer.from(rawBodyText, "utf8");
 
-    // Compute expected digest using your helper (must return base64)
+    // ✅ Compute expected digest (Base64)
     const expectedBase64 = generatedSignature(bodyBuffer);
 
-    // Compare as buffers using timingSafeEqual
+    // ✅ Compare digests securely
     const headerBuf = Buffer.from(hmacHeader, "base64");
     const expectedBuf = Buffer.from(expectedBase64, "base64");
 
     const sameLength = headerBuf.length === expectedBuf.length;
-    const digestsMatch = sameLength && crypto.timingSafeEqual(headerBuf, expectedBuf);
+    const digestsMatch =
+      sameLength && crypto.timingSafeEqual(headerBuf, expectedBuf);
 
-    console.log("🧩 Shopify HMAC header (base64, trimmed):", hmacHeader?.slice(0, 12) + "...");
-    console.log("🧩 Local digest (base64, trimmed):", expectedBase64?.slice(0, 12) + "...");
+    console.log(
+      "🧩 Shopify HMAC header (base64, trimmed):",
+      hmacHeader?.slice(0, 12) + "...",
+    );
+    console.log(
+      "🧩 Local digest (base64, trimmed):",
+      expectedBase64?.slice(0, 12) + "...",
+    );
     console.log("🔒 HMAC compare — same length:", sameLength, "match:", digestsMatch);
 
     if (!digestsMatch) {
       console.error("❌ HMAC mismatch — unauthorized webhook");
-      return NextResponse.json({ success: false, message: "Unauthorized webhook" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "Unauthorized webhook" },
+        { status: 401 },
+      );
     }
 
     console.log("✅ HMAC verification successful");
 
-    // Parse JSON from the exact bytes (avoid text() transformations)
-    const rawBodyText = bodyBuffer.toString("utf8");
+    // ✅ Parse body safely from raw text
     const body = JSON.parse(rawBodyText);
-
     console.log("📦 Incoming webhook:", topic, "Order ID:", body.id);
 
     const orderId = body.id?.toString();
