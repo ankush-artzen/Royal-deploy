@@ -176,33 +176,34 @@ export async function createRoyaltyTransactionForOrder({
     `✅ RoyaltyTransaction created [txId=${royaltyTransaction?.id}, orderId=${orderId}, price=${royaltyTransaction?.price} USD]`,
   );
   // 6️⃣ Create notification after transaction
-  if (royaltyTransaction?.designerId) {
-    // 🧩 Safely cast price JSON to expected shape
-    const priceData = royaltyTransaction.price as {
-      storeprice?: number;
-      storeCurrency?: string;
-      usd?: number;
-    };
+ // 6️⃣ Create concise one-line notification after royalty transaction
+if (royaltyTransaction?.designerId) {
+  const priceData = royaltyTransaction.price as {
+    storeprice?: number;
+    storeCurrency?: string;
+    usd?: number;
+  };
 
-    const usdPrice = priceData?.usd ?? 0;
-    const percentage = royaltyTransaction?.royaltyPercentage ?? 0;
+  const usdPrice = priceData?.usd ?? 0;
+  const percentage = royaltyTransaction?.royaltyPercentage ?? 0;
+  const royaltyAmount = ((usdPrice * percentage) / 100).toFixed(2);
+  const orderName = royaltyTransaction.orderName || "Unknown Order";
+  const status = royaltyTransaction.status?.toUpperCase() || "PENDING";
 
-    // 💰 Calculate royalty amount safely
-    const royaltyAmount = ((usdPrice * percentage) / 100).toFixed(2);
+  const message = `💰 Royalty earned for "${orderName}" — $${royaltyAmount} USD (${percentage}% of $${usdPrice} USD) `;
 
-    await prisma.notification.create({
-      data: {
-        type: "royalty_order",
-        message: `💰 Royalty transaction created for "${royaltyTransaction.orderName}" - ${royaltyTransaction.royaltyPercentage}% (${royaltyAmount} USD)`,
-        shop,
-        designerId: royaltyTransaction.designerId,
-      },
-    });
+  await prisma.notification.create({
+    data: {
+      type: "royalty_order",
+      message,
+      shop,
+      designerId: royaltyTransaction.designerId,
+    },
+  });
 
-    console.log(
-      `✅ Royalty notification created for ${royaltyTransaction.orderName} — ${royaltyTransaction.royaltyPercentage}% (${royaltyAmount} USD)`,
-    );
-  }
+  console.log(`✅ Notification created: ${message}`);
+}
+
 
   return royaltyTransaction;
 }
