@@ -12,16 +12,51 @@
 import crypto from "node:crypto";
 
 export const generatedSignature = (rawBody: Buffer): string => {
-  // ⚠️ Shopify uses your App’s API Secret Key (NOT client ID)
-  const secret = process.env.SHOPIFY_WEBHOOK_SECRET || process.env.SHOPIFY_API_SECRET!;
-  if (!secret) {
-    throw new Error("SHOPIFY_WEBHOOK_SECRET or SHOPIFY_API_SECRET not defined in env vars");
+  console.log("\n🔐 [generatedSignature] Called at:", new Date().toISOString());
+
+  if (!rawBody || rawBody.length === 0) {
+    console.warn("⚠️ [generatedSignature] Empty rawBody buffer received");
+  } else {
+    console.log("📦 [generatedSignature] rawBody length:", rawBody.length);
+    console.log(
+      "📦 [generatedSignature] rawBody preview (first 200 chars):",
+      rawBody.toString("utf8").slice(0, 200)
+    );
   }
 
-  return crypto
-    .createHmac("sha256", secret)
-    .update(rawBody)
-    .digest("base64");
+  // ✅ Retrieve secret key
+  const secret =
+    process.env.SHOPIFY_WEBHOOK_SECRET || process.env.SHOPIFY_API_SECRET;
+
+  if (!secret) {
+    console.error(
+      "❌ [generatedSignature] Missing SHOPIFY_WEBHOOK_SECRET or SHOPIFY_API_SECRET in environment variables"
+    );
+    throw new Error(
+      "SHOPIFY_WEBHOOK_SECRET or SHOPIFY_API_SECRET not defined in env vars"
+    );
+  }
+
+  console.log("🧩 [generatedSignature] Using secret key source:", 
+    process.env.SHOPIFY_WEBHOOK_SECRET ? "SHOPIFY_WEBHOOK_SECRET" : "SHOPIFY_API_SECRET"
+  );
+
+  // ⚠️ Never log full secret for security
+  console.log("🔑 [generatedSignature] Secret key preview:", secret.slice(0, 5) + "••••••••");
+
+  try {
+    // ✅ Generate HMAC digest
+    const hmac = crypto.createHmac("sha256", secret).update(rawBody).digest("base64");
+
+    console.log("✅ [generatedSignature] HMAC digest generated successfully");
+    console.log("🧮 [generatedSignature] Digest (Base64):", hmac);
+    console.log("🧮 [generatedSignature] Digest length:", hmac.length);
+
+    return hmac;
+  } catch (err) {
+    console.error("💥 [generatedSignature] HMAC generation failed:", err);
+    throw err;
+  }
 };
 
 

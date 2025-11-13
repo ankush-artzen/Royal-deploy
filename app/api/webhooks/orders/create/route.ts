@@ -1,55 +1,61 @@
+import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { generatedSignature } from "@/lib/helper/hmacSignature";
 import prisma from "@/lib/db/prisma-connect";
 import { createRoyaltyTransactionForOrder } from "@/lib/helper/createRoyaltyTransactionForOrder";
 import { convertCurrency } from "@/lib/config/currency-utils";
-import { generatedSignature } from "@/lib/helper/hmacSignature";
-import crypto from "node:crypto";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  console.log("✅ Orders webhook hit at", new Date().toISOString());
+
   try {
-    console.log("✅ Orders webhook hit at", new Date().toISOString());
-
     const shop = req.headers.get("x-shopify-shop-domain");
-    const hmac = req.headers.get("x-shopify-hmac-sha256");
+    const hmacHeader = req.headers.get("x-shopify-hmac-sha256");
+    const topic = req.headers.get("x-shopify-topic") || "unknown";
 
-    // ✅ Read raw body as bytes (important for exact HMAC match)
+    if (!shop) {
+      console.error("❌ Missing x-shopify-shop-domain header");
+      return NextResponse.json({ success: false, message: "Missing shop header" }, { status: 400 });
+    }
+    if (!hmacHeader) {
+      console.error("❌ Missing x-shopify-hmac-sha256 header");
+      return NextResponse.json({ success: false, message: "Missing signature header" }, { status: 400 });
+    }
+
+    // Get exact raw bytes as received
     const arrayBuffer = await req.arrayBuffer();
-    const rawBody = Buffer.from(arrayBuffer);
+    const bodyBuffer = Buffer.from(arrayBuffer);
 
-    if (!shop || !hmac) {
-      console.warn("⚠️ Missing required Shopify headers");
-      return NextResponse.json(
-        { success: false, message: "Missing Shopify headers" },
-        { status: 400 }
-      );
+    // Compute expected digest using your helper (must return base64)
+    const expectedBase64 = generatedSignature(bodyBuffer);
+
+    // Compare as buffers using timingSafeEqual
+    const headerBuf = Buffer.from(hmacHeader, "base64");
+    const expectedBuf = Buffer.from(expectedBase64, "base64");
+
+    const sameLength = headerBuf.length === expectedBuf.length;
+    const digestsMatch = sameLength && crypto.timingSafeEqual(headerBuf, expectedBuf);
+
+    console.log("🧩 Shopify HMAC header (base64, trimmed):", hmacHeader?.slice(0, 12) + "...");
+    console.log("🧩 Local digest (base64, trimmed):", expectedBase64?.slice(0, 12) + "...");
+    console.log("🔒 HMAC compare — same length:", sameLength, "match:", digestsMatch);
+
+    if (!digestsMatch) {
+      console.error("❌ HMAC mismatch — unauthorized webhook");
+      return NextResponse.json({ success: false, message: "Unauthorized webhook" }, { status: 401 });
     }
 
-    // ✅ Generate local digest using the raw bytes
-    const digest = generatedSignature(rawBody);
+    console.log("✅ HMAC verification successful");
 
-    console.log("🧩 Shopify HMAC:", hmac);
-    console.log("🧩 Local digest:", digest);
+    // Parse JSON from the exact bytes (avoid text() transformations)
+    const rawBodyText = bodyBuffer.toString("utf8");
+    const body = JSON.parse(rawBodyText);
 
-    // ✅ Timing-safe HMAC comparison
-    const validHmac =
-      hmac.length === digest.length &&
-      crypto.timingSafeEqual(
-        Buffer.from(hmac, "base64"),
-        Buffer.from(digest, "base64")
-      );
+    console.log("📦 Incoming webhook:", topic, "Order ID:", body.id);
 
-    if (!validHmac) {
-      console.error("❌ Invalid HMAC signature. Webhook not from Shopify.");
-      return NextResponse.json(
-        { success: false, message: "Unauthorized webhook" },
-        { status: 401 }
-      );
-    }
-
-    // ✅ Parse JSON only after verification
-    const body = JSON.parse(rawBody.toString("utf8"));
-
-    // ✅ Continue your existing logic
     const orderId = body.id?.toString();
     const orderName = body.name;
     const createdAt = new Date(body.created_at);
@@ -208,52 +214,41 @@ export async function POST(req: NextRequest) {
         }
 
         // Update product royalties
-        // await Promise.all(
-        //   royaltyUpdates.map(async (update) => {
-        //     const productRoyalty = await tx.productRoyalty.findUnique({
-        //       where: { id: update.id },
-        //     });
-
-        //     // Force TypeScript to treat totalRoyaltyEarned as object
-        //     const prev = (productRoyalty?.totalRoyaltyEarned as {
-        //       amount: number;
-        //       currency: string;
-        //       usdAmount: number;
-        //     }) || { amount: 0, currency: storeCurrency, usdAmount: 0 };
-
-        //     // Convert current royalty to USD
-        //     // const usdAmount = await convertCurrency(
-        //     //   update.amount,
-        //     //   storeCurrency,
-        //     //   "USD",
-        //     // );
-        //     const usdAmount =
-        //       storeCurrency === "USD"
-        //         ? update.amount
-        //         : await convertCurrency(update.amount, storeCurrency, "USD");
-
-        //     const newTotal = {
-        //       amount: prev.amount + update.amount,
-        //       currency: storeCurrency,
-        //       usdAmount: prev.usdAmount + usdAmount,
-        //     };
-
-        //     return tx.productRoyalty.update({
-        //       where: { id: update.id },
-        //       data: {
-        //         totalSold: { increment: update.quantity },
-        //         totalRoyaltyEarned: newTotal,
-        //       },
-        //     });
-        //   }),
-        // );
-        // ✅ Only update totalSold during order creation
         await Promise.all(
           royaltyUpdates.map(async (update) => {
+            const productRoyalty = await tx.productRoyalty.findUnique({
+              where: { id: update.id },
+            });
+
+            // Force TypeScript to treat totalRoyaltyEarned as object
+            const prev = (productRoyalty?.totalRoyaltyEarned as {
+              amount: number;
+              currency: string;
+              usdAmount: number;
+            }) || { amount: 0, currency: storeCurrency, usdAmount: 0 };
+
+            // Convert current royalty to USD
+            // const usdAmount = await convertCurrency(
+            //   update.amount,
+            //   storeCurrency,
+            //   "USD",
+            // );
+            const usdAmount =
+              storeCurrency === "USD"
+                ? update.amount
+                : await convertCurrency(update.amount, storeCurrency, "USD");
+
+            const newTotal = {
+              amount: prev.amount + update.amount,
+              currency: storeCurrency,
+              usdAmount: prev.usdAmount + usdAmount,
+            };
+
             return tx.productRoyalty.update({
               where: { id: update.id },
               data: {
                 totalSold: { increment: update.quantity },
+                totalRoyaltyEarned: newTotal,
               },
             });
           }),

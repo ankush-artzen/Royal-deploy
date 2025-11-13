@@ -177,16 +177,30 @@ export async function createRoyaltyTransactionForOrder({
   );
   // 6️⃣ Create notification after transaction
   if (royaltyTransaction?.designerId) {
+    // 🧩 Safely cast price JSON to expected shape
+    const priceData = royaltyTransaction.price as {
+      storeprice?: number;
+      storeCurrency?: string;
+      usd?: number;
+    };
+
+    const usdPrice = priceData?.usd ?? 0;
+    const percentage = royaltyTransaction?.royaltyPercentage ?? 0;
+
+    // 💰 Calculate royalty amount safely
+    const royaltyAmount = ((usdPrice * percentage) / 100).toFixed(2);
+
     await prisma.notification.create({
       data: {
         type: "royalty_order",
-        message: `Royalty transaction created for "${royaltyTransaction.orderName}" - ${royaltyTransaction.royaltyPercentage}%`,
+        message: `💰 Royalty transaction created for "${royaltyTransaction.orderName}" - ${royaltyTransaction.royaltyPercentage}% (${royaltyAmount} USD)`,
         shop,
         designerId: royaltyTransaction.designerId,
       },
     });
+
     console.log(
-      `✅ Royalty notification created for ${royaltyTransaction.orderName} (Designer: ${royaltyTransaction.designerId})`,
+      `✅ Royalty notification created for ${royaltyTransaction.orderName} — ${royaltyTransaction.royaltyPercentage}% (${royaltyAmount} USD)`,
     );
   }
 
