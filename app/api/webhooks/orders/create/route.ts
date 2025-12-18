@@ -81,6 +81,72 @@ export async function POST(req: NextRequest) {
     const createdAt = new Date(body.created_at);
     const currency = body.currency || "USD";
     const storeCurrency = body.presentment_currency || currency;
+// import crypto from "node:crypto";
+// import { NextRequest, NextResponse } from "next/server";
+// import { generatedSignature } from "@/lib/helper/hmacSignature";
+// import prisma from "@/lib/db/prisma-connect";
+// import { createRoyaltyTransactionForOrder } from "@/lib/helper/createRoyaltyTransactionForOrder";
+// import { convertCurrency } from "@/lib/config/currency-utils";
+
+// export const runtime = "nodejs";
+// export const dynamic = "force-dynamic";
+
+// export async function POST(req: NextRequest) {
+//   console.log(" Orders webhook hit at", new Date().toISOString());
+
+//   try {
+//     const shop = req.headers.get("x-shopify-shop-domain");
+//     const topic = req.headers.get("x-shopify-topic") || "unknown";
+
+//     // const hmacHeader = req.headers.get("x-shopify-hmac-sha256")?.trim();
+
+//     if (!shop) {
+//       console.error(" Missing x-shopify-shop-domain header");
+//       return NextResponse.json(
+//         { success: false, message: "Missing shop header" },
+//         { status: 400 },
+//       );
+//     }
+
+//     // if (!hmacHeader) {
+//     //   console.error(" Missing x-shopify-hmac-sha256 header");
+//     //   return NextResponse.json(
+//     //     { success: false, message: "Missing signature header" },
+//     //     { status: 400 }
+//     //   );
+//     // }
+
+//     // Read raw body
+//     const rawBodyText = await req.text();
+//     const bodyBuffer = Buffer.from(rawBodyText, "utf8");
+
+//     // const expectedBase64 = generatedSignature(bodyBuffer);
+//     // const headerBuf = Buffer.from(hmacHeader!, "base64");
+//     // const expectedBuf = Buffer.from(expectedBase64, "base64");
+
+//     // const sameLength = headerBuf.length === expectedBuf.length;
+//     // const digestsMatch =
+//     //   sameLength && crypto.timingSafeEqual(headerBuf, expectedBuf);
+
+//     // if (!digestsMatch) {
+//     //   console.error(" HMAC mismatch — unauthorized webhook");
+//     //   return NextResponse.json(
+//     //     { success: false, message: "Unauthorized webhook" },
+//     //     { status: 401 }
+//     //   );
+//     // }
+
+//     console.log(" 🔓 HMAC check skipped (Postman testing)");
+
+//     // Parse body
+//     const body = JSON.parse(rawBodyText);
+//     console.log(" Incoming webhook:", topic, "Order ID:", body.id);
+
+//     const orderId = body.id?.toString();
+//     const orderName = body.name;
+//     const createdAt = new Date(body.created_at);
+//     const currency = body.currency || "USD";
+//     const storeCurrency = body.presentment_currency || currency;
 
     if (!orderId || !body.line_items) {
       console.warn("⚠️ Invalid order data:", body);
@@ -218,17 +284,13 @@ export async function POST(req: NextRequest) {
             await tx.notification.create({
               data: {
                 type: "royalty_order",
-                message: `Order created: "${li.title}" at ${li.royaltyPercentage}%`,
+                message: `Order created for "${shop}" product Name  "${li.title}" at ${li.royaltyPercentage}% royalty`,
                 shop,
                 designerId: li.designerId,
               },
             });
             console.log(
               `royalty notification created for ${li.title} (Designer: ${li.designerId})`,
-            );
-
-            console.log(
-              ` Royalty notification created for ${li.title} (Designer: ${li.designerId})`,
             );
           }
         }
@@ -334,56 +396,112 @@ export async function POST(req: NextRequest) {
       body.fulfillment_status === "fulfilled" &&
       body.financial_status === "paid"
     ) {
-      const transactionPromises = result.lineItem.map(async (li: any) => {
-        // Skip if there are no royalties or if product royalty is expired
-        if (!li.royalties) return;
+      console.log("---------------------------------------");
 
-        for (const royalty of li.royalties) {
-          // Get the product royalty to check expiry
-          const productRoyalty = await prisma.productRoyalty.findUnique({
-            where: { id: royalty.id }, // Adjust this based on your royalty structure
+      console.log("---------------------------------------");
+      // const transactionPromises = result.lineItem.map(async (li: any) => {
+      //   // Skip if there are no royalties or if product royalty is expired
+      //   if (!li.royalties) return;
+      //   console.log("--------",transactionPromises)
+
+      //   for (const royalty of li.royalties) {
+      //     // Get the product royalty to check expiry
+      //     const productRoyalty = await prisma.productRoyalty.findFirst({
+      //       where: { id: royalty.id }, // Adjust this based on your royalty structure
+      //     });
+      //     console.log("--------",productRoyalty)
+
+      //     // Skip if royalty is expired
+      //     if (productRoyalty?.expiry) {
+      //                 console.log("--------",productRoyalty)
+
+      //       const expiryDate = new Date(productRoyalty.expiry);
+      //       if (expiryDate.getTime() < Date.now()) {
+      //         console.log(
+      //           `⚠️ Skipping transaction for ${li.title} → product royalty expired`,
+      //         );
+      //         continue;
+      //       }
+      //     }
+
+      //     try
+      //     {
+      //       await createRoyaltyTransactionForOrder({
+      //         shop,
+      //         orderId,
+      //         orderName: result.orderName,
+      //         productId: li.productId,
+      //         variantId:  li.variantId,
+      //         description: `Royalty payment for order ${result.orderName} - ${li.title}`,
+      //         price: li.productRoyaltyAmount,
+      //         currency: result.currency || "",
+      //         royaltyPercentage: li.royaltyPercentage,
+      //         designerId: li.designerId,
+      //         shopifyTransactionChargeId: "", // optional if needed
+      //       });
+      //     } catch (error: any) {
+      //       if (
+      //         error.message?.includes("already exists") ||
+      //         error.message?.includes("Transaction already exists")
+      //       ) {
+      //         console.log(
+      //           `⚠️ Transaction already exists for ${li.title} → Skipping`,
+      //         );
+      //         continue;
+      //       }
+      //       console.error(
+      //         `❌ Error creating transaction for ${li.title}:`,
+      //         error,
+      //       );
+      //       throw error;
+      //     }
+      //   }
+      // });
+      const transactionPromises = result.lineItem.map(async (li: any) => {
+        try {
+          // 🔍 Fetch product royalty to validate expiry
+          const productRoyalty = await prisma.productRoyalty.findFirst({
+            where: {
+              productId: li.productId,
+              designerId: li.designerId,
+              shop,
+            },
           });
 
-          // Skip if royalty is expired
-          if (productRoyalty?.expiry) {
+          if (!productRoyalty) {
+            console.log(`⚠️ No royalty config found for ${li.title}`);
+            return;
+          }
+
+          if (productRoyalty.expiry) {
             const expiryDate = new Date(productRoyalty.expiry);
             if (expiryDate.getTime() < Date.now()) {
-              console.log(
-                `⚠️ Skipping transaction for ${li.title} → product royalty expired`,
-              );
-              continue;
+              console.log(`⚠️ Skipping ${li.title} → royalty expired`);
+              return;
             }
           }
 
-          try {
-            await createRoyaltyTransactionForOrder({
-              shop,
-              orderId,
-              orderName: result.orderName,
-              productId: li.productId,
-              description: `Royalty payment for order ${result.orderName} - ${li.title}`,
-              price: li.productRoyaltyAmount,
-              currency: result.currency || "",
-              royaltyPercentage: li.royaltyPercentage,
-              designerId: li.designerId,
-              shopifyTransactionChargeId: "", // optional if needed
-            });
-          } catch (error: any) {
-            if (
-              error.message?.includes("already exists") ||
-              error.message?.includes("Transaction already exists")
-            ) {
-              console.log(
-                `⚠️ Transaction already exists for ${li.title} → Skipping`,
-              );
-              continue;
-            }
-            console.error(
-              `❌ Error creating transaction for ${li.title}:`,
-              error,
-            );
-            throw error;
+          await createRoyaltyTransactionForOrder({
+            shop,
+            orderId,
+            orderName: result.orderName,
+            productId: li.productId,
+            variantId: li.variantId,
+            description: `Royalty payment for order ${result.orderName} - ${li.title}`,
+            price: li.productRoyaltyAmount,
+            currency: result.currency || "",
+            royaltyPercentage: li.royaltyPercentage,
+            designerId: li.designerId,
+            shopifyTransactionChargeId: "",
+          });
+
+          console.log(`✅ Transaction created for ${li.title}`);
+        } catch (error: any) {
+          if (error.message?.includes("already exists")) {
+            console.log(`⚠️ Duplicate transaction → ${li.title}`);
+            return;
           }
+          throw error;
         }
       });
 

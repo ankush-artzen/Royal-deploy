@@ -247,6 +247,7 @@ interface CreateRoyaltyTxParams {
   orderId: string;
   orderName: string;
   productId: string;
+  variantId:string;
   description: string;
   price: number;
   currency: string;

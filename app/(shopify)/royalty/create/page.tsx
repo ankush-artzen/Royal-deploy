@@ -17,6 +17,7 @@ import {
   Divider,
   Banner,
   Spinner,
+  Select,
 } from "@shopify/polaris";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useRouter } from "next/navigation";
@@ -44,6 +45,7 @@ export default function AssignRoyalty() {
   const [toastActive, setToastActive] = useState(false);
   const [toastContent, setToastContent] = useState("");
   const [toastError, setToastError] = useState(false);
+  const [designerOptions, setDesignerOptions] = useState([]);
 
   const dismissToast = () => setToastActive(false);
   const showToast = (msg: string, isError = false) => {
@@ -52,6 +54,20 @@ export default function AssignRoyalty() {
     setToastActive(true);
   };
 
+  useEffect(() => {
+    const fetchRoyalIds = async () => {
+      const res = await fetch("/api/royality/designers");
+      const json = await res.json();
+      if (json.success) {
+        const formatted = json.data.map((id: string) => ({
+          label: id,
+          value: id,
+        }));
+        setDesignerOptions(formatted);
+      }
+    };
+    fetchRoyalIds();
+  }, []);
   // ✅ Step 1: Fetch shop info from App Bridge
   useEffect(() => {
     const shopFromConfig = (app as any)?.config?.shop;
@@ -266,12 +282,20 @@ export default function AssignRoyalty() {
                 </Text>
                 <Divider />
                 <FormLayout>
-                  <TextField
+                  {/* <TextField
                     label="Designer ID"
                     value={selectedDesigner}
                     onChange={setSelectedDesigner}
                     placeholder="Enter designer ID"
                     autoComplete="off"
+                    disabled={!billingActive}
+                  /> */}
+                  <Select
+                    label="Designer ID"
+                    options={designerOptions}
+                    value={selectedDesigner}
+                    onChange={setSelectedDesigner}
+                    placeholder="Select designer ID"
                     disabled={!billingActive}
                   />
 
@@ -305,7 +329,7 @@ export default function AssignRoyalty() {
                     />
                     Set expiry date
                   </label>
-
+                  {/* 
                   {hasExpiry && (
                     <TextField
                       label="Expiry Date & Time"
@@ -315,6 +339,41 @@ export default function AssignRoyalty() {
                       autoComplete="off"
                       disabled={!billingActive}
                     />
+                  )} */}
+                  {hasExpiry && (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        alignItems: "flex-end",
+                      }}
+                    >
+                      <TextField
+                        label="Expiry Date & Time"
+                        type="datetime-local"
+                        value={expiry}
+                        onChange={setExpiry}
+                        autoComplete="off"
+                        disabled={!billingActive}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExpiry(expiry);
+                        }}
+                        disabled={!billingActive}
+                        style={{
+                          height: "38px",
+                          padding: "0 14px",
+                          borderRadius: "6px",
+                          border: "1px solid #ccc",
+                          cursor: billingActive ? "pointer" : "not-allowed",
+                          opacity: billingActive ? 1 : 0.4,
+                        }}
+                      >
+                        Set
+                      </button>
+                    </div>
                   )}
                 </FormLayout>
               </BlockStack>

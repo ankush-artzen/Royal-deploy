@@ -185,6 +185,7 @@ model RoyaltyTransaction {
   orderId                    String
   orderName                  String?
   productId                  String?  
+  variantId                String?
   description                String
   price                      Json  
   currency                   String 
